@@ -1,7 +1,6 @@
 @echo off
 chcp 65001 >nul
 setlocal EnableDelayedExpansion
-set "FORCE_GITHUB="
 
 REM =============================================================================
 REM Copia SOURCE para REPO + git add, commit, push (Abobi Server Cron / ServidorCron)
@@ -22,9 +21,10 @@ REM Mesma pasta do projeto = deploy direto (sem copia). Troque se usar clone em 
 set "REPO=%SOURCE%"
 REM Exemplo clone separado: set "REPO=D:\git\ServidorCron"
 
-REM Substitui o historico no GitHub pelo desta pasta ^(apaga commits antigos no remoto^).
-REM Para ativar: remova "REM" da linha abaixo ^(use uma vez, depois volte a comentar^).
-REM set "FORCE_GITHUB=1"
+REM Push FORCADO: substitui a branch main no GitHub por esta pasta ^(apaga historico antigo no remoto^).
+REM ATENCAO: depois que o push funcionar UMA vez, COMENTE a linha abaixo para nao sobrescrever o GitHub por engano.
+set "FORCE_GITHUB=1"
+REM Para deploy normal ^(sem apagar historico remoto^): comente a linha acima com REM.
 
 REM Opcional: usar sempre a pasta onde esta o .bat
 REM set "SOURCE=%~dp0" & if "%SOURCE:~-1%"=="\" set "SOURCE=%SOURCE:~0,-1%" & set "REPO=%SOURCE%"
