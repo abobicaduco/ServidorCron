@@ -1,6 +1,7 @@
 @echo off
 chcp 65001 >nul
 setlocal EnableDelayedExpansion
+set "FORCE_GITHUB="
 
 REM =============================================================================
 REM Copia SOURCE para REPO + git add, commit, push (Abobi Server Cron / ServidorCron)
@@ -20,6 +21,10 @@ set "SOURCE=g:\My Drive\python\AbobiServerCron"
 REM Mesma pasta do projeto = deploy direto (sem copia). Troque se usar clone em outro disco:
 set "REPO=%SOURCE%"
 REM Exemplo clone separado: set "REPO=D:\git\ServidorCron"
+
+REM Substitui o historico no GitHub pelo desta pasta ^(apaga commits antigos no remoto^).
+REM Para ativar: remova "REM" da linha abaixo ^(use uma vez, depois volte a comentar^).
+REM set "FORCE_GITHUB=1"
 
 REM Opcional: usar sempre a pasta onde esta o .bat
 REM set "SOURCE=%~dp0" & if "%SOURCE:~-1%"=="\" set "SOURCE=%SOURCE:~0,-1%" & set "REPO=%SOURCE%"
@@ -93,7 +98,20 @@ if errorlevel 1 (
 )
 echo [OK] Commit criado.
 
-git push
+git remote get-url origin >nul 2>&1
+if errorlevel 1 (
+  echo [ERRO] Remote "origin" nao existe. Rode:
+  echo   git remote add origin https://github.com/abobicaduco/ServidorCron.git
+  popd
+  exit /b 1
+)
+
+if defined FORCE_GITHUB (
+  echo [AVISO] Push FORCADO — main local substitui a main no GitHub.
+  git push -u origin main --force
+) else (
+  git push -u origin main
+)
 set ERR=!ERRORLEVEL!
 popd
 
@@ -101,5 +119,5 @@ if not "!ERR!"=="0" (
   echo [ERRO] git push falhou.
   exit /b 1
 )
-echo [OK] Push concluido no GitHub.
+echo [OK] Push concluido no GitHub ^(branch main, upstream origin/main^).
 exit /b 0
