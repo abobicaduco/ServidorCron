@@ -79,6 +79,14 @@ Use Application Default Credentials (ADC), e.g. `gcloud auth application-default
 
 [MIT](LICENSE) — Copyright (c) 2026 abobicaduco.
 
+### Replacing an existing GitHub repo
+
+If `main` already exists on GitHub with **older commits**, your first push may be rejected. Options:
+
+1. **Replace remote history** (only if you intend to overwrite the old tree):  
+   `git push --force-with-lease origin main`
+2. **Merge histories**: `git pull origin main --allow-unrelated-histories`, resolve conflicts, then `git push origin main`.
+
 ---
 
 ## LinkedIn / portfolio blurb (short)
