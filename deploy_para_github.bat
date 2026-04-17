@@ -86,17 +86,22 @@ git add automacoes 2>nul
 git add -A
 git status
 
-git commit -m "chore: sync Abobi Server Cron"
+REM git diff --staged --quiet: codigo 0 = nada a commitar, 1 = ha alteracoes
+git diff --staged --quiet
 if errorlevel 1 (
-  echo [ERRO] git commit falhou. Veja a mensagem acima.
-  echo        Se aparecer "Author identity unknown", rode:
-  echo        git config user.name "Seu Nome"
-  echo        git config user.email "seu@email.com"
-  echo [INFO] Ou nao havia alteracoes novas para commitar.
-  popd
-  exit /b 1
+  git commit -m "chore: sync Abobi Server Cron"
+  if errorlevel 1 (
+    echo [ERRO] git commit falhou. Veja a mensagem acima.
+    echo        Se aparecer "Author identity unknown", rode:
+    echo        git config user.name "Seu Nome"
+    echo        git config user.email "seu@email.com"
+    popd
+    exit /b 1
+  )
+  echo [OK] Commit criado.
+) else (
+  echo [INFO] Nenhuma alteracao para commitar — continuando ^(push pode dizer "Already up to date"^).
 )
-echo [OK] Commit criado.
 
 git remote get-url origin >nul 2>&1
 if errorlevel 1 (
