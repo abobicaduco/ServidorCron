@@ -1,0 +1,64 @@
+@echo off
+chcp 65001 >nul
+setlocal EnableDelayedExpansion
+
+REM =============================================================================
+REM Copia SOURCE para REPO + git add, commit, push (Abobi Server Cron)
+REM Copie este arquivo para deploy_para_github.bat e ajuste SOURCE e REPO.
+REM =============================================================================
+
+set "SOURCE=C:\caminho\para\AbobiServerCron"
+set "REPO=C:\caminho\para\clone\ServidorCron"
+
+if not exist "%REPO%\.git" (
+  echo [ERRO] REPO nao e um clone git: %REPO%
+  exit /b 1
+)
+if not exist "%SOURCE%\main.py" (
+  echo [ERRO] SOURCE invalida: %SOURCE%
+  exit /b 1
+)
+
+echo SOURCE: %SOURCE%
+echo REPO:   %REPO%
+echo.
+
+if /I "%SOURCE%"=="%REPO%" goto SAME_FOLDER
+
+echo A copiar para o clone...
+for %%F in (main.py dashboard.html README.md LICENSE requirements.txt .gitignore .env.example deploy_para_github.bat.example) do (
+  if exist "%SOURCE%\%%F" (
+    copy /Y "%SOURCE%\%%F" "%REPO%\%%F" >nul
+    echo   OK %%F
+  )
+)
+if exist "%SOURCE%\deploy_para_github.bat" (
+  copy /Y "%SOURCE%\deploy_para_github.bat" "%REPO%\deploy_para_github.bat" >nul
+  echo   OK deploy_para_github.bat
+)
+if exist "%SOURCE%\automacoes" (
+  if not exist "%REPO%\automacoes" mkdir "%REPO%\automacoes"
+  robocopy "%SOURCE%\automacoes" "%REPO%\automacoes" /E /NFL /NDL /NJH /NJS
+  if errorlevel 8 exit /b 1
+  echo   OK automacoes\
+)
+goto DO_GIT
+
+:SAME_FOLDER
+echo [INFO] SOURCE e REPO iguais - sem copia, so git.
+
+:DO_GIT
+pushd "%REPO%"
+git add -A
+git status
+git commit -m "chore: sync Abobi Server Cron"
+if errorlevel 1 (
+  popd
+  exit /b 1
+)
+git push
+set ERR=!ERRORLEVEL!
+popd
+if not "!ERR!"=="0" exit /b 1
+echo [OK] Push concluido.
+exit /b 0
