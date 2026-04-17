@@ -1,0 +1,23 @@
+__pycache__/
+*.py[cod]
+*.log
+.env
+.venv/
+venv/
+.env.local
+
+# Local access / optional Excel (may contain names — keep private)
+access_registry.xlsx
+optional_cobranca_cron.xlsx
+
+# App data (Windows)
+**/AbobiServerCron/logs/
+**/jobs_scheduler.sqlite
+
+# User home state
+.abobi-server-cron/
+
+# IDE
+.idea/
+.vscode/
+*.swp

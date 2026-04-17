@@ -1,0 +1,1420 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Abobi Server Cron</title>
+    <!-- Tailwind CSS v4 via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root, [data-theme="dark"] {
+            --c6-black: #050505;
+            --c6-dark: #121212;
+            --c6-gray: #1E1E1E;
+            --c6-gold: #D4AF37;
+            --c6-yellow: #FFD700;
+            --app-bg: #050505;
+            --panel-bg: rgba(255,255,255,0.02);
+            --panel-border: rgba(255,255,255,0.05);
+            --text-primary: #f1f5f9;
+            --text-muted: #94a3b8;
+            --sidebar-bg: #0a0a0a;
+        }
+        [data-theme="light"] {
+            --app-bg: #f4f6f9;
+            --panel-bg: #ffffff;
+            --panel-border: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-muted: #64748b;
+            --sidebar-bg: #ffffff;
+            --c6-gold: #b8860b;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--app-bg);
+            color: var(--text-primary);
+        }
+        [data-theme="light"] .shadow-card {
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+        }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: #0a0a0a; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--c6-gold); }
+
+        /* Glassmorphism */
+        .glass {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Animations */
+        @keyframes pulse-gold {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.95); }
+        }
+        .pulse-gold { animation: pulse-gold 2s infinite; }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Sidebar active state */
+        .nav-item.active {
+            background: rgba(212, 175, 55, 0.1);
+            color: var(--c6-gold);
+            border-right: 3px solid var(--c6-gold);
+        }
+
+        @media (max-width: 1023px) {
+            .nav-item.active { border-right: none; border-left: 3px solid var(--c6-gold); }
+        }
+
+        /* Mobile sidebar drawer */
+        #sidebar.sidebar-open { transform: translateX(0); }
+        #sidebar-backdrop.is-open { opacity: 1; pointer-events: auto; }
+
+        .table-responsive {
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .touch-target { min-height: 44px; min-width: 44px; }
+        .safe-area-pt { padding-top: env(safe-area-inset-top, 0px); }
+
+        #login-overlay { background: linear-gradient(145deg, #0a0a0a 0%, #1a1508 50%, #0a0a0a 100%); }
+        [data-theme="light"] #login-overlay { background: linear-gradient(145deg, #f8fafc 0%, #e2e8f0 100%); }
+        [data-theme="light"] .login-card { background: #fff !important; border-color: #e2e8f0 !important; }
+        [data-theme="light"] .login-title { color: #0f172a; }
+        [data-theme="light"] .login-muted { color: #64748b; }
+        [data-theme="light"] .login-input { border-color: #cbd5e1 !important; background: #f8fafc !important; color: #0f172a !important; }
+        [data-theme="light"] .login-divider { border-color: #e2e8f0 !important; }
+        [data-theme="light"] .login-verify-btn { background: #e2e8f0 !important; color: #0f172a !important; }
+        [data-theme="light"] .login-verify-btn:hover { background: #cbd5e1 !important; }
+
+        [data-theme="light"] ::-webkit-scrollbar-track { background: #e8ecf1; }
+        [data-theme="light"] ::-webkit-scrollbar-thumb { background: #c5cdd8; }
+        [data-theme="light"] ::-webkit-scrollbar-thumb:hover { background: #9aa5b8; }
+
+        [data-theme="light"] #sidebar {
+            background: #ffffff !important;
+            border-right: 1px solid #e2e8f0 !important;
+            box-shadow: 2px 0 12px rgba(15, 23, 42, 0.04);
+        }
+        [data-theme="light"] #sidebar .text-white { color: #0f172a !important; }
+        [data-theme="light"] #sidebar .text-gray-300 { color: #475569 !important; }
+        [data-theme="light"] #sidebar .text-gray-400 { color: #64748b !important; }
+        [data-theme="light"] #sidebar .text-gray-500 { color: #64748b !important; }
+        [data-theme="light"] #sidebar .border-white\/10 { border-color: #e2e8f0 !important; }
+        [data-theme="light"] #sidebar .bg-white\/5,
+        [data-theme="light"] #sidebar .bg-white\/\[0\.03\] { background: #f8fafc !important; }
+        [data-theme="light"] #sidebar .nav-item:not(.active) { color: #475569 !important; }
+        [data-theme="light"] #sidebar .nav-item.active {
+            background: rgba(184, 134, 11, 0.12) !important;
+            color: #92400e !important;
+            border-right-color: #ca8a04 !important;
+        }
+
+        [data-theme="light"] #main-panel {
+            background: #f4f6f9 !important;
+        }
+        [data-theme="light"] .theme-header-bar {
+            background: rgba(255, 255, 255, 0.92) !important;
+            border-color: #e2e8f0 !important;
+            box-shadow: 0 1px 0 rgba(15, 23, 42, 0.06);
+        }
+        [data-theme="light"] #main-panel .text-white { color: #0f172a !important; }
+        [data-theme="light"] #main-panel .border-white\/5 { border-color: #e2e8f0 !important; }
+        [data-theme="light"] #main-panel .bg-white\/\[0\.02\],
+        [data-theme="light"] #main-panel .bg-white\/\[0\.01\] {
+            background: #ffffff !important;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+        }
+        [data-theme="light"] #main-panel .bg-white\/5 { background: #f1f5f9 !important; }
+        [data-theme="light"] #script-search {
+            background: #ffffff !important;
+            border-color: #cbd5e1 !important;
+            color: #0f172a !important;
+        }
+        [data-theme="light"] #script-search::placeholder { color: #94a3b8; }
+        [data-theme="light"] .mobile-bar-cron {
+            background: rgba(255,255,255,0.95) !important;
+            border-color: #e2e8f0 !important;
+        }
+        [data-theme="light"] .mobile-bar-cron .text-white { color: #0f172a !important; }
+
+        [data-theme="light"] .doc-confluence-btn,
+        [data-theme="light"] .doc-confluence-link {
+            border-color: #0ea5e9 !important;
+            background: rgba(14, 165, 233, 0.1) !important;
+            color: #0369a1 !important;
+        }
+        [data-theme="light"] .doc-confluence-btn:hover,
+        [data-theme="light"] .doc-confluence-link:hover {
+            background: rgba(14, 165, 233, 0.18) !important;
+            color: #0c4a6e !important;
+        }
+    </style>
+</head>
+<body class="antialiased min-h-screen min-h-[100dvh]" style="background-color: var(--app-bg); color: var(--text-primary);">
+
+    <!-- Login (token — same flow as ServidorUploaders) -->
+    <div id="login-overlay" class="fixed inset-0 z-[200] flex flex-col items-center justify-center p-4 sm:p-6">
+        <div class="login-card w-full max-w-md rounded-2xl border p-6 sm:p-8 shadow-2xl backdrop-blur-md" style="background: rgba(10,10,10,0.92); border-color: rgba(255,255,255,0.1);">
+            <div class="mb-6 flex items-center gap-3">
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-yellow-400 to-yellow-700 text-xs font-bold text-black shadow-lg">A</div>
+                <div>
+                    <h1 class="login-title text-lg font-bold tracking-tight text-white">Abobi Server Cron</h1>
+                    <p class="text-[10px] font-medium uppercase tracking-wider text-gray-500">Workflow orchestrator</p>
+                </div>
+            </div>
+            <p class="login-muted mb-4 text-xs text-gray-400">Enter your configured username (see server <code class="text-yellow-500/90">ABOBI_EMAIL_DOMAIN</code>). A 6-digit token will be sent to your mailbox.</p>
+            <div id="login-step-user" class="space-y-3">
+                <label class="block text-[10px] font-bold uppercase tracking-wider text-gray-500">Usuário</label>
+                <input type="text" id="login-username" autocomplete="username" class="login-input w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none placeholder:text-gray-600 focus:border-yellow-500 focus:ring-2 focus:ring-yellow-500/40" placeholder="nome.sobrenome">
+                <button type="button" id="login-request-btn" class="w-full rounded-xl bg-yellow-500 py-3 text-sm font-bold text-black transition hover:bg-yellow-400">Enviar token por e-mail</button>
+            </div>
+            <div id="login-step-token" class="login-divider mt-6 hidden space-y-3 border-t border-white/10 pt-6">
+                <label class="block text-[10px] font-bold uppercase tracking-wider text-gray-500">Código recebido</label>
+                <input type="text" id="login-token" inputmode="numeric" maxlength="8" class="login-input w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-center font-mono text-2xl tracking-[0.3em] text-white outline-none focus:border-yellow-500 focus:ring-2 focus:ring-yellow-500/40" placeholder="000000">
+                <button type="button" id="login-verify-btn" class="login-verify-btn w-full rounded-xl bg-white/10 py-3 text-sm font-bold text-white transition hover:bg-white/20">Entrar</button>
+                <button type="button" id="login-back-btn" class="w-full text-xs text-gray-500 underline-offset-2 hover:underline">Voltar</button>
+            </div>
+            <p id="login-msg" class="mt-4 min-h-[1.25rem] text-center text-xs text-gray-500"></p>
+            <p class="mt-4 text-center">
+                <a href="https://github.com/abobicaduco/ServidorCron" target="_blank" rel="noopener noreferrer" class="text-[11px] font-semibold text-sky-400/90 hover:text-sky-300 hover:underline underline-offset-2">GitHub — README</a>
+            </p>
+        </div>
+    </div>
+
+    <div id="app-shell" class="hidden">
+
+    <!-- Mobile menu bar -->
+    <header class="mobile-bar-cron lg:hidden sticky top-0 z-50 flex items-center justify-between gap-2 px-3 py-2.5 border-b border-white/10 bg-[#0a0a0a]/95 backdrop-blur-md safe-area-pt">
+        <button type="button" id="sidebar-open-btn" class="touch-target flex items-center justify-center rounded-lg text-gray-300 hover:bg-white/10 hover:text-white -ml-1" aria-label="Abrir menu">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <span class="text-sm font-bold tracking-widest text-white truncate flex-1 text-center">Abobi</span>
+        <a href="https://github.com/abobicaduco/ServidorCron" target="_blank" rel="noopener noreferrer" class="touch-target flex items-center justify-center rounded-lg text-sky-400 hover:bg-sky-500/15 px-1.5" aria-label="GitHub README" title="GitHub">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </a>
+        <button type="button" onclick="forceReload()" class="adm-only reload-sync-btn touch-target px-2 flex items-center justify-center rounded-lg text-yellow-500 hover:bg-yellow-500/10" aria-label="Sincronizar cadastro com BigQuery">
+            <svg class="reload-sync-icon w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        </button>
+    </header>
+
+    <div id="sidebar-backdrop" class="fixed inset-0 z-40 bg-black/70 opacity-0 pointer-events-none transition-opacity duration-200 lg:hidden" aria-hidden="true" role="presentation"></div>
+
+    <div class="flex min-h-0 flex-1 h-[100dvh] lg:h-screen overflow-hidden">
+        <!-- Sidebar -->
+        <aside class="fixed inset-y-0 left-0 z-50 flex w-[min(18rem,92vw)] flex-col border-r border-white/5 bg-[#0a0a0a] transition-transform duration-200 ease-out -translate-x-full lg:static lg:z-20 lg:w-64 lg:translate-x-0" id="sidebar">
+            <div class="p-4 sm:p-6 border-b border-white/5 flex items-start justify-between gap-2">
+                <div class="flex items-center space-x-3 min-w-0">
+                    <div class="w-8 h-8 shrink-0 bg-gradient-to-br from-yellow-400 to-yellow-700 rounded-lg flex items-center justify-center shadow-lg shadow-yellow-900/20">
+                        <span class="text-black font-bold text-xs">A</span>
+                    </div>
+                    <div class="min-w-0">
+                        <h1 class="text-sm font-bold tracking-widest text-white uppercase truncate">Abobi Server Cron</h1>
+                        <p class="text-[10px] text-gray-500 font-medium uppercase tracking-tighter leading-tight">Open source</p>
+                    </div>
+                </div>
+                <button type="button" id="sidebar-close-btn" class="lg:hidden touch-target shrink-0 flex items-center justify-center rounded-lg text-gray-500 hover:text-white hover:bg-white/10" aria-label="Fechar menu">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+                <button onclick="switchTab('dashboard')" data-tab="dashboard" class="nav-item w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-400 hover:bg-white/5 hover:text-white transition-all group">
+                    <svg class="w-5 h-5 group-hover:text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                    <span>Dashboard</span>
+                </button>
+                <button onclick="switchTab('scripts')" data-tab="scripts" class="nav-item w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium text-gray-400 hover:bg-white/5 hover:text-white transition-all group">
+                    <div class="flex items-center space-x-3">
+                        <svg class="w-5 h-5 group-hover:text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                        <span>Scripts</span>
+                    </div>
+                    <span class="text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-gray-400" id="badge-scripts">0</span>
+                </button>
+                <button onclick="switchTab('live')" data-tab="live" class="nav-item w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium text-gray-400 hover:bg-white/5 hover:text-white transition-all group">
+                    <div class="flex items-center space-x-3">
+                        <svg class="w-5 h-5 group-hover:text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                        <span>Ao Vivo</span>
+                    </div>
+                    <span class="flex h-2 w-2 rounded-full bg-red-500 pulse-gold" id="badge-live-dot"></span>
+                </button>
+                <button onclick="switchTab('pending')" data-tab="pending" class="nav-item w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium text-gray-400 hover:bg-white/5 hover:text-white transition-all group">
+                    <div class="flex items-center space-x-3">
+                        <svg class="w-5 h-5 group-hover:text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <span>Pendentes</span>
+                    </div>
+                    <span class="text-[10px] bg-orange-500/20 px-1.5 py-0.5 rounded text-orange-500 hidden" id="badge-pending">0</span>
+                </button>
+                <button onclick="switchTab('history')" data-tab="history" class="nav-item w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-400 hover:bg-white/5 hover:text-white transition-all group">
+                    <svg class="w-5 h-5 group-hover:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span>Histórico</span>
+                </button>
+                <button onclick="switchTab('jobs')" data-tab="jobs" class="nav-item w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-400 hover:bg-white/5 hover:text-white transition-all group">
+                    <svg class="w-5 h-5 group-hover:text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    <span>Agendados</span>
+                </button>
+            </nav>
+
+            <div class="shrink-0 px-3 pb-3">
+                <p class="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2 px-1">Dúvidas</p>
+                <a href="https://github.com/abobicaduco/ServidorCron" target="_blank" rel="noopener noreferrer" class="doc-confluence-btn flex w-full items-center justify-center gap-2 rounded-lg border border-sky-500/35 bg-sky-500/10 px-3 py-2.5 text-xs font-semibold text-sky-300 hover:bg-sky-500/20 hover:text-sky-200 transition-all">
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                    <span>GitHub (README)</span>
+                </a>
+            </div>
+
+            <div class="p-4 border-t border-white/5 bg-black/20 space-y-3">
+                <div class="flex items-center justify-between gap-2">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-gray-500">Tema</span>
+                    <button type="button" id="theme-toggle-btn" class="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-[10px] font-semibold text-gray-300 hover:bg-white/10" aria-label="Alternar tema">Escuro</button>
+                </div>
+                <div class="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+                    <div class="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Sessão</div>
+                    <div class="text-xs font-semibold text-white truncate" id="session-user">—</div>
+                    <div class="text-[10px] text-gray-500 mt-0.5" id="session-role">—</div>
+                    <button type="button" id="logout-btn" class="mt-2 w-full rounded-lg border border-white/10 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 hover:bg-white/5 hover:text-white">Sair</button>
+                </div>
+                <div class="adm-only rounded-lg border border-white/10 bg-white/[0.03] p-3 space-y-2">
+                    <div class="text-[10px] font-bold uppercase tracking-wider text-gray-500">Convite (Outlook)</div>
+                    <p class="text-[10px] text-gray-500 leading-snug">Abre o Outlook com o texto pronto. Preencha o campo <b>Para</b> na mensagem com quem deseja convidar.</p>
+                    <button type="button" id="share-outlook-btn" class="w-full rounded-lg bg-amber-500/20 py-2.5 text-[10px] font-bold uppercase tracking-wider text-amber-200 hover:bg-amber-500/30">Abrir Outlook com convite</button>
+                </div>
+                <div class="flex items-center space-x-3 mb-1">
+                    <div class="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" id="status-dot"></div>
+                    <span class="text-xs font-semibold text-gray-300 uppercase tracking-tighter" id="status-label">Sistema Online</span>
+                </div>
+                <div class="space-y-1">
+                    <div class="text-[10px] text-gray-500 flex justify-between">
+                        <span>Uptime</span>
+                        <span class="text-gray-300 font-mono" id="sidebar-uptime">--:--:--</span>
+                    </div>
+                    <div class="text-[10px] text-gray-500 flex justify-between">
+                        <span>Versão</span>
+                        <span class="text-gray-300" id="server-version">--</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main id="main-panel" class="flex flex-1 flex-col min-w-0 min-h-0 bg-[#050505] relative">
+            <!-- Header (desktop / tablet) -->
+            <header class="theme-header-bar hidden sm:flex border-b border-white/5 flex-col gap-3 py-3 px-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8 flex-shrink-0 bg-[#050505]/90 backdrop-blur-md sticky top-0 z-10">
+                <div class="flex min-w-0 flex-1 items-center gap-4">
+                    <h2 class="text-base sm:text-lg font-bold text-white tracking-tight truncate" id="page-title">Dashboard</h2>
+                    <a href="https://github.com/abobicaduco/ServidorCron" target="_blank" rel="noopener noreferrer" class="doc-confluence-link hidden sm:inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-1.5 text-[11px] font-semibold text-sky-300 hover:bg-sky-500/20 hover:text-sky-200 transition-all">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                        GitHub
+                    </a>
+                </div>
+                <div class="flex flex-wrap items-center gap-3 sm:gap-4">
+                    <div class="text-[10px] text-gray-500 flex flex-wrap items-center gap-3 sm:gap-4">
+                        <div class="flex flex-col items-start sm:items-end">
+                            <span class="text-[8px] uppercase tracking-widest text-gray-600">Próxima atualização</span>
+                            <span id="bq-countdown" class="text-xs font-mono text-yellow-500 font-bold tabular-nums">--:--</span>
+                        </div>
+                        <div class="flex items-center gap-2 min-w-0">
+                            <span class="w-1.5 h-1.5 shrink-0 rounded-full bg-yellow-500 animate-pulse"></span>
+                            <span id="last-refresh" class="truncate text-[10px] sm:text-xs">Atualizando...</span>
+                        </div>
+                    </div>
+                    <button type="button" onclick="forceReload()" class="adm-only reload-sync-btn touch-target sm:min-h-0 sm:min-w-0 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs font-semibold text-white transition-all flex items-center justify-center gap-2" aria-label="Sincronizar cadastro com BigQuery">
+                        <svg class="reload-sync-icon w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        <span class="hidden sm:inline">Sincronizar cadastro</span>
+                        <span class="sm:hidden">Sync</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Subheader mobile: title + status strip -->
+            <div class="sm:hidden px-4 py-3 border-b border-white/5 bg-[#050505]/95 flex flex-col gap-2">
+                <h2 class="text-base font-bold text-white tracking-tight" id="page-title-mobile">Dashboard</h2>
+                <div class="flex items-center justify-between gap-2 text-[10px] text-gray-500">
+                    <div class="flex flex-col min-w-0">
+                        <span class="text-[8px] uppercase text-gray-600">Próxima atualização</span>
+                        <span id="bq-countdown-mobile" class="font-mono text-yellow-500 font-bold tabular-nums">--:--</span>
+                    </div>
+                    <span id="last-refresh-mobile" class="truncate text-right">...</span>
+                </div>
+            </div>
+
+            <!-- Scrollable Area -->
+            <div class="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8 scroll-smooth">
+                
+                <!-- DASHBOARD TAB -->
+                <div id="tab-dashboard" class="tab-content active space-y-8">
+                    <!-- Stats Grid -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6" id="stats-grid">
+                        <!-- Stats will be injected here -->
+                    </div>
+
+                    <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+                        <!-- Running Table -->
+                        <div class="xl:col-span-2 bg-white/[0.02] border border-white/5 rounded-xl sm:rounded-2xl overflow-hidden min-w-0">
+                            <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-white/5 flex flex-wrap justify-between items-center gap-2 bg-white/[0.01]">
+                                <h3 class="text-xs sm:text-sm font-bold text-white uppercase tracking-widest">Processos em Execução</h3>
+                                <span class="text-[10px] text-gray-500 font-mono" id="running-count-label">0 ativos</span>
+                            </div>
+                            <div class="table-responsive overflow-x-auto" id="dash-running">
+                                <!-- Table injected here -->
+                            </div>
+                        </div>
+
+                        <!-- Queued Table -->
+                        <div class="bg-white/[0.02] border border-white/5 rounded-xl sm:rounded-2xl overflow-hidden min-w-0 flex flex-col">
+                            <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-white/5 flex justify-between items-center bg-white/[0.01]">
+                                <h3 class="text-xs sm:text-sm font-bold text-white uppercase tracking-widest">Aguardando Rodar</h3>
+                                <svg class="w-4 h-4 text-yellow-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            </div>
+                            <div id="dash-queued" class="p-3 sm:p-4 space-y-2 sm:space-y-3 max-h-[50vh] sm:max-h-none overflow-y-auto">
+                                <!-- Queued items injected here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SCRIPTS TAB -->
+                <div id="tab-scripts" class="tab-content space-y-6">
+                    <div class="flex flex-col gap-4 mb-4">
+                        <div>
+                            <p class="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Área</p>
+                            <div id="area-chips" class="flex flex-wrap gap-2 max-h-[min(40vh,520px)] overflow-y-auto overscroll-contain pb-1 pr-1">
+                                <!-- Area chips injected here -->
+                            </div>
+                        </div>
+                        <div class="relative flex-1 max-w-2xl">
+                            <input type="search" id="script-search" autocomplete="off" enterkeyhint="search" placeholder="Buscar por nome do script ou área (todas as áreas)" class="w-full bg-white/5 border border-white/10 rounded-xl px-10 py-3 text-sm text-white placeholder-gray-500 focus:ring-2 focus:ring-yellow-500/50 focus:border-yellow-500 outline-none transition-all">
+                            <svg class="w-5 h-5 text-gray-500 absolute left-3 top-3 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                        </div>
+                    </div>
+                    <div id="script-search-hint" class="hidden text-[11px] text-amber-500/90 font-medium"></div>
+                    <div id="area-scripts-loading" class="hidden text-center text-xs text-gray-500 py-8">Carregando scripts da área…</div>
+                    <div id="areas-container" class="space-y-4">
+                        <!-- Single-area script cards injected here -->
+                    </div>
+                </div>
+
+                <!-- LIVE TAB -->
+                <div id="tab-live" class="tab-content space-y-4 sm:space-y-6">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
+                        <div class="flex items-center space-x-3 min-w-0">
+                            <div class="w-3 h-3 shrink-0 bg-red-500 rounded-full animate-pulse"></div>
+                            <h3 class="text-base sm:text-lg font-bold text-white truncate">Monitoramento em Tempo Real</h3>
+                        </div>
+                        <button type="button" onclick="killAll()" class="adm-only touch-target sm:min-h-0 w-full sm:w-auto px-4 py-2.5 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 rounded-xl text-xs font-bold transition-all">
+                            Encerrar Todos
+                        </button>
+                    </div>
+                    <div class="bg-white/[0.02] border border-white/5 rounded-xl sm:rounded-2xl overflow-hidden table-responsive overflow-x-auto">
+                        <table class="w-full min-w-[720px] text-left border-collapse">
+                            <thead>
+                                <tr class="text-[10px] uppercase tracking-widest text-gray-500 border-b border-white/5 bg-white/[0.01]">
+                                    <th class="px-6 py-4">Script</th>
+                                    <th class="px-6 py-4">Área</th>
+                                    <th class="px-6 py-4">PID</th>
+                                    <th class="px-6 py-4">Prio</th>
+                                    <th class="px-6 py-4">Duração</th>
+                                    <th class="px-6 py-4">Recursos</th>
+                                    <th class="px-6 py-4 text-right">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="live-tbody" class="divide-y divide-white/5">
+                                <!-- Live processes injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- PENDING TAB -->
+                <div id="tab-pending" class="tab-content space-y-6">
+                    <div class="bg-white/[0.02] border border-white/5 rounded-xl sm:rounded-2xl overflow-hidden table-responsive overflow-x-auto">
+                        <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-white/5 flex flex-wrap justify-between items-center gap-2 bg-white/[0.01]">
+                            <h3 class="text-xs sm:text-sm font-bold text-white uppercase tracking-widest">Scripts Pendentes (Catch-up)</h3>
+                            <span id="pending-date" class="text-[10px] text-gray-500 font-mono">--</span>
+                        </div>
+                        <table class="w-full min-w-[640px] text-left border-collapse">
+                            <thead>
+                                <tr class="text-[10px] uppercase tracking-widest text-gray-500 border-b border-white/5">
+                                    <th class="px-6 py-4">Script</th>
+                                    <th class="px-6 py-4">Área</th>
+                                    <th class="px-6 py-4">Cron</th>
+                                    <th class="px-6 py-4">Esperado</th>
+                                    <th class="px-6 py-4">Prio</th>
+                                    <th class="px-6 py-4 text-right">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pending-tbody" class="divide-y divide-white/5">
+                                <!-- Pending scripts injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- HISTORY TAB -->
+                <div id="tab-history" class="tab-content space-y-6">
+                    <div class="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 mb-4 sm:mb-6 bg-white/[0.02] p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-white/5">
+                        <input type="text" id="hist-script" placeholder="Filtrar script..." class="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-xs text-white outline-none focus:ring-1 focus:ring-yellow-500">
+                        <select id="hist-status" class="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-xs text-white outline-none focus:ring-1 focus:ring-yellow-500">
+                            <option value="">Todos Status</option>
+                            <option value="success">Sucesso</option>
+                            <option value="error">Erro</option>
+                            <option value="killed">Killed</option>
+                        </select>
+                        <button onclick="loadHistory()" class="px-4 py-2 bg-yellow-500 text-black rounded-lg text-xs font-bold hover:bg-yellow-400 transition-all">Filtrar</button>
+                    </div>
+                    <div class="bg-white/[0.02] border border-white/5 rounded-xl sm:rounded-2xl overflow-hidden table-responsive overflow-x-auto">
+                        <table class="w-full min-w-[680px] text-left border-collapse">
+                            <thead>
+                                <tr class="text-[10px] uppercase tracking-widest text-gray-500 border-b border-white/5 bg-white/[0.01]">
+                                    <th class="px-4 sm:px-6 py-3 sm:py-4">Script</th>
+                                    <th class="px-4 sm:px-6 py-3 sm:py-4">Status</th>
+                                    <th class="px-4 sm:px-6 py-3 sm:py-4">Início</th>
+                                    <th class="px-4 sm:px-6 py-3 sm:py-4">Duração</th>
+                                    <th class="px-4 sm:px-6 py-3 sm:py-4">Trigger</th>
+                                    <th class="px-4 sm:px-6 py-3 sm:py-4">Exit</th>
+                                </tr>
+                            </thead>
+                            <tbody id="hist-tbody" class="divide-y divide-white/5 text-xs">
+                                <!-- History injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- JOBS TAB -->
+                <div id="tab-jobs" class="tab-content space-y-6">
+                    <div class="bg-white/[0.02] border border-white/5 rounded-xl sm:rounded-2xl overflow-hidden table-responsive overflow-x-auto">
+                        <table class="w-full min-w-[640px] text-left border-collapse">
+                            <thead>
+                                <tr class="text-[10px] uppercase tracking-widest text-gray-500 border-b border-white/5 bg-white/[0.01]">
+                                    <th class="px-6 py-4">Job ID</th>
+                                    <th class="px-6 py-4">Nome / Expressão</th>
+                                    <th class="px-6 py-4">Próxima Execução</th>
+                                    <th class="px-6 py-4 text-right">Countdown</th>
+                                </tr>
+                            </thead>
+                            <tbody id="jobs-tbody" class="divide-y divide-white/5 text-xs">
+                                <!-- Jobs injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    </div><!-- #app-shell -->
+
+    <!-- Toast Notifications -->
+    <div id="toasts" class="fixed bottom-4 left-4 right-4 z-50 flex flex-col gap-2 sm:bottom-auto sm:left-auto sm:right-6 sm:top-6 pointer-events-none [&>*]:pointer-events-auto"></div>
+
+    <script>
+        const API = window.location.origin;
+        const TAB_TITLES = {
+            dashboard: 'Dashboard',
+            scripts: 'Scripts',
+            live: 'Ao vivo',
+            pending: 'Pendentes',
+            history: 'Histórico',
+            jobs: 'Agendados',
+        };
+        let currentTab = 'dashboard';
+        let statusData = null;
+        /** @type {{ name: string, count: number }[] | null} */
+        let areasSummaryCache = null;
+        /** @type {string | null} */
+        let selectedAreaName = null;
+        /** @type {object[] | null} */
+        let currentAreaScripts = null;
+        let serverOnline = true;
+        let _pollTimer = null;
+        let isAdmin = false;
+        let currentUser = null;
+        let _scriptSearchTimer = null;
+
+        const THEME_KEY = 'servidor_cron_theme';
+
+        function escapeHtml(s) {
+            if (s == null || s === undefined) return '';
+            return String(s)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+        try {
+            const __t0 = localStorage.getItem(THEME_KEY);
+            if (__t0 === 'light' || __t0 === 'dark') document.documentElement.setAttribute('data-theme', __t0);
+        } catch (e) {}
+
+        function applyRoleUi() {
+            document.querySelectorAll('.adm-only').forEach((el) => {
+                el.classList.toggle('hidden', !isAdmin);
+                el.setAttribute('aria-hidden', isAdmin ? 'false' : 'true');
+            });
+        }
+
+        function applyTheme(theme) {
+            const t = theme === 'light' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', t);
+            try { localStorage.setItem(THEME_KEY, t); } catch (e) {}
+            const btn = document.getElementById('theme-toggle-btn');
+            if (btn) btn.textContent = t === 'light' ? 'Modo escuro' : 'Modo claro';
+        }
+
+        function toggleTheme() {
+            const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+            applyTheme(cur === 'dark' ? 'light' : 'dark');
+        }
+
+        function showLoginUi() {
+            document.getElementById('login-overlay')?.classList.remove('hidden');
+            document.getElementById('app-shell')?.classList.add('hidden');
+        }
+
+        function hideLoginUi() {
+            document.getElementById('login-overlay')?.classList.add('hidden');
+            document.getElementById('app-shell')?.classList.remove('hidden');
+        }
+
+        async function refreshAuthStatus() {
+            try {
+                const r = await fetch(API + '/api/auth/status', { credentials: 'same-origin' });
+                const d = await r.json();
+                if (d.logged_in) {
+                    currentUser = d.username;
+                    isAdmin = d.role === 'admin';
+                    const su = document.getElementById('session-user');
+                    const sr = document.getElementById('session-role');
+                    if (su) su.textContent = d.username || '—';
+                    if (sr) sr.textContent = isAdmin ? 'Administrador' : 'Somente visualização';
+                    applyRoleUi();
+                    return true;
+                }
+            } catch (e) { console.error(e); }
+            currentUser = null;
+            isAdmin = false;
+            applyRoleUi();
+            return false;
+        }
+
+        async function doLogout() {
+            clearTimeout(_pollTimer);
+            _pollTimer = null;
+            _dashboardBooted = false;
+            await fetch(API + '/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
+            showLoginUi();
+            document.getElementById('login-step-token')?.classList.add('hidden');
+            document.getElementById('login-msg').textContent = '';
+        }
+
+        function closeSidebar() {
+            document.getElementById('sidebar')?.classList.remove('sidebar-open');
+            document.getElementById('sidebar-backdrop')?.classList.remove('is-open');
+        }
+        function openSidebar() {
+            document.getElementById('sidebar')?.classList.add('sidebar-open');
+            document.getElementById('sidebar-backdrop')?.classList.add('is-open');
+        }
+
+        // --- UI Logic ---
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            
+            document.getElementById('tab-' + tab).classList.add('active');
+            const navItem = document.querySelector(`.nav-item[data-tab="${tab}"]`);
+            if (navItem) navItem.classList.add('active');
+            
+            currentTab = tab;
+            const title = TAB_TITLES[tab] || tab;
+            const pt = document.getElementById('page-title');
+            const ptm = document.getElementById('page-title-mobile');
+            if (pt) pt.textContent = title;
+            if (ptm) ptm.textContent = title;
+            closeSidebar();
+            
+            // Initial loads for specific tabs
+            if (tab === 'scripts') loadScriptsTab();
+            if (tab === 'history') loadHistory();
+            if (tab === 'jobs') loadJobs();
+            if (tab === 'pending') loadPending();
+        }
+
+        function toast(msg, type = 'info') {
+            const container = document.getElementById('toasts');
+            const d = document.createElement('div');
+            
+            const colors = {
+                success: 'bg-green-500 border-green-400',
+                error: 'bg-red-500 border-red-400',
+                info: 'bg-blue-500 border-blue-400',
+                warning: 'bg-orange-500 border-orange-400'
+            };
+            
+            d.className = `px-6 py-3 rounded-xl shadow-2xl border-l-4 text-white text-sm font-bold flex items-center space-x-3 animate-bounce-in ${colors[type] || colors.info}`;
+            d.innerHTML = `
+                <span>${msg}</span>
+            `;
+            
+            container.appendChild(d);
+            setTimeout(() => {
+                d.style.opacity = '0';
+                d.style.transform = 'translateX(20px)';
+                setTimeout(() => d.remove(), 300);
+            }, 4000);
+        }
+
+        // --- API Helpers ---
+        async function api(path, opts = {}) {
+            try {
+                const fetchOpts = { credentials: 'same-origin', ...opts };
+                const r = await fetch(API + path, fetchOpts);
+                if (r.status === 401) {
+                    showLoginUi();
+                    toast('Sessão expirada — faça login novamente.', 'warning');
+                    return null;
+                }
+                if (!r.ok) throw new Error(`HTTP error! status: ${r.status}`);
+                const ct = r.headers.get('content-type') || '';
+                if (ct.includes('application/json')) return await r.json();
+                return await r.text();
+            } catch (e) {
+                console.error(`API Error (${path}):`, e);
+                return null;
+            }
+        }
+
+        // --- Formatters ---
+        function fmtTime(s) {
+            s = Math.floor(s);
+            if (s < 60) return s + 's';
+            if (s < 3600) { 
+                const m = Math.floor(s / 60); 
+                return m + 'm' + String(s % 60).padStart(2, '0') + 's'; 
+            }
+            const h = Math.floor(s / 3600); 
+            const m = Math.floor((s % 3600) / 60); 
+            return h + 'h' + String(m).padStart(2, '0') + 'm';
+        }
+
+        function fmtDate(iso) { 
+            if (!iso) return '--'; 
+            const d = new Date(iso); 
+            return d.toLocaleString('pt-BR', { 
+                day: '2-digit', month: '2-digit', 
+                hour: '2-digit', minute: '2-digit', second: '2-digit' 
+            }); 
+        }
+
+        function countdown(iso) { 
+            if (!iso) return '--'; 
+            const diff = Math.max(0, Math.floor((new Date(iso) - Date.now()) / 1000)); 
+            if (diff === 0) return 'agora'; 
+            return fmtTime(diff); 
+        }
+
+        function getPriorityBadge(prio) {
+            const colors = {
+                1: 'bg-red-500/20 text-red-500 border-red-500/30',
+                2: 'bg-yellow-500/20 text-yellow-500 border-yellow-500/30',
+                3: 'bg-blue-500/20 text-blue-500 border-blue-500/30'
+            };
+            return `<span class="px-2 py-0.5 rounded text-[10px] font-black border ${colors[prio] || colors[2]}">P${prio}</span>`;
+        }
+
+        // --- Rendering Logic ---
+
+        function renderStats(d) {
+            const s = d.server_metrics;
+            const container = document.getElementById('stats-grid');
+            
+            const stats = [
+                { label: 'CPU', value: s.cpu_percent + '%', sub: 'Processamento', color: s.cpu_percent > 85 ? 'text-red-500' : 'text-yellow-500', icon: 'M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z' },
+                { label: 'RAM', value: s.ram_percent + '%', sub: `${s.ram_used_gb}GB / ${s.ram_total_gb}GB`, color: s.ram_percent > 85 ? 'text-red-500' : 'text-blue-500', icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10' },
+                { label: 'Executando', value: d.running_count, sub: `de ${d.max_concurrent} slots`, color: 'text-green-500', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
+                { label: 'Na Fila', value: d.queued_count, sub: 'Aguardando recursos', color: 'text-orange-500', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' }
+            ];
+
+            container.innerHTML = stats.map(st => `
+                <div class="bg-white/[0.02] border border-white/5 p-4 sm:p-6 rounded-xl sm:rounded-2xl hover:bg-white/[0.04] transition-all group">
+                    <div class="flex justify-between items-start mb-3 sm:mb-4 gap-2">
+                        <div class="p-2 bg-white/5 rounded-lg group-hover:bg-white/10 transition-colors shrink-0">
+                            <svg class="w-5 h-5 text-gray-400 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${st.icon}"></path></svg>
+                        </div>
+                        <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest text-right leading-tight">${st.label}</span>
+                    </div>
+                    <div class="text-2xl sm:text-3xl font-black ${st.color} tracking-tighter mb-1 tabular-nums">${st.value}</div>
+                    <div class="text-[10px] text-gray-500 font-medium uppercase truncate">${st.sub}</div>
+                </div>
+            `).join('');
+        }
+
+        function renderDashRunning(procs) {
+            const container = document.getElementById('dash-running');
+            document.getElementById('running-count-label').textContent = `${procs.length} ativos`;
+            
+            if (!procs.length) { 
+                container.innerHTML = '<div class="py-12 text-center text-gray-500 text-xs uppercase tracking-widest">Silêncio no servidor...</div>'; 
+                return; 
+            }
+
+            container.innerHTML = `
+                <table class="w-full min-w-[520px] text-left border-collapse">
+                    <thead>
+                        <tr class="text-[10px] uppercase tracking-widest text-gray-500 border-b border-white/5">
+                            <th class="px-4 sm:px-6 py-3">Script</th>
+                            <th class="px-4 sm:px-6 py-3">Tempo</th>
+                            <th class="px-4 sm:px-6 py-3">RAM</th>
+                            <th class="px-4 sm:px-6 py-3 text-right">Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-white/5">
+                        ${procs.map(p => `
+                            <tr class="hover:bg-white/[0.02] transition-colors">
+                                <td class="px-6 py-4">
+                                    <div class="text-sm font-bold text-white">${p.python_name}</div>
+                                    <div class="text-[10px] text-gray-500 uppercase">${p.area_name}</div>
+                                </td>
+                                <td class="px-6 py-4 font-mono text-xs text-yellow-500">${fmtTime(p.running_time_seconds)}</td>
+                                <td class="px-6 py-4 font-mono text-xs text-gray-400">${p.rss_mb}MB</td>
+                                <td class="px-6 py-4 text-right">
+                                    <button onclick="killPid(${p.pid})" class="adm-only text-[10px] font-black text-red-500 hover:text-red-400 uppercase tracking-tighter">Encerrar</button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function renderDashQueued(q) {
+            const container = document.getElementById('dash-queued');
+            if (!q.length) { 
+                container.innerHTML = '<div class="py-8 text-center text-gray-600 text-[10px] uppercase tracking-widest">Fila vazia</div>'; 
+                return; 
+            }
+
+            container.innerHTML = q.map(p => `
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 bg-white/5 rounded-xl border border-white/5 group hover:border-yellow-500/30 transition-all">
+                    <div class="flex items-start sm:items-center gap-3 min-w-0">
+                        <div class="text-sm font-black text-gray-500 shrink-0">#${p.position}</div>
+                        <div class="min-w-0">
+                            <div class="text-sm sm:text-base font-bold text-white truncate">${p.python_name}</div>
+                            <div class="text-[10px] text-gray-500 uppercase truncate">${p.area_name}</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between sm:justify-end gap-3 pl-8 sm:pl-0">
+                        ${getPriorityBadge(p.priority)}
+                        <span class="text-sm font-mono text-orange-500 font-bold tabular-nums">${fmtTime(p.waiting_seconds)}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateReloadCountdown(iso) {
+            const t = countdown(iso);
+            const el = document.getElementById('bq-countdown');
+            const elm = document.getElementById('bq-countdown-mobile');
+            if (el) el.textContent = t;
+            if (elm) elm.textContent = t;
+        }
+
+        // --- Master Polling ---
+        async function masterPoll() {
+            const d = await api('/api/status');
+            if (!d) { 
+                setOnlineStatus(false); 
+                return; 
+            }
+            setOnlineStatus(true);
+            statusData = d;
+            
+            // Badge Live
+            const badgeLiveDot = document.getElementById('badge-live-dot');
+            if (d.running_count > 0) badgeLiveDot.classList.remove('hidden');
+            else badgeLiveDot.classList.add('hidden');
+
+            const syncLabel = 'Sincronizado: ' + new Date().toLocaleTimeString('pt-BR');
+            const lr = document.getElementById('last-refresh');
+            const lrm = document.getElementById('last-refresh-mobile');
+            if (lr) lr.textContent = syncLabel;
+            if (lrm) lrm.textContent = syncLabel;
+
+            if (d.next_hot_reload_iso) {
+                updateReloadCountdown(d.next_hot_reload_iso);
+            }
+
+            if (currentTab === 'dashboard') { 
+                renderStats(d); 
+                renderDashRunning(d.running_processes); 
+                renderDashQueued(d.queued_processes); 
+            }
+            if (currentTab === 'live') renderLive(d);
+        }
+
+        function pollLoop() {
+            masterPoll().finally(() => {
+                const interval = document.hidden ? 10000 : 2000;
+                _pollTimer = setTimeout(pollLoop, interval);
+            });
+        }
+
+        function setOnlineStatus(online) {
+            serverOnline = online;
+            const dot = document.getElementById('status-dot');
+            const lbl = document.getElementById('status-label');
+            if (online) { 
+                dot.className = 'w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]'; 
+                lbl.textContent = 'Sistema Online'; 
+            } else { 
+                dot.className = 'w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]'; 
+                lbl.textContent = 'Servidor Offline'; 
+            }
+        }
+
+        // --- Live Tab ---
+        function renderLive(d) {
+            const tb = document.getElementById('live-tbody');
+            if (!d.running_processes.length) { 
+                tb.innerHTML = '<tr><td colspan="7" class="py-20 text-center text-gray-500 text-xs uppercase tracking-widest">Nenhum processo ativo no momento</td></tr>'; 
+                return; 
+            }
+            tb.innerHTML = d.running_processes.map(p => `
+                <tr class="hover:bg-white/[0.02] transition-colors text-xs">
+                    <td class="px-6 py-4 font-bold text-white">${p.python_name}</td>
+                    <td class="px-6 py-4 uppercase text-[10px] text-gray-400">${p.area_name}</td>
+                    <td class="px-6 py-4 font-mono text-gray-500">${p.pid}</td>
+                    <td class="px-6 py-4">${getPriorityBadge(p.priority)}</td>
+                    <td class="px-6 py-4 font-mono text-yellow-500">${fmtTime(p.running_time_seconds)}</td>
+                    <td class="px-6 py-4 font-mono text-gray-400">
+                        <div class="flex flex-col">
+                            <span>RAM: ${p.rss_mb}MB</span>
+                            <span class="text-[9px] text-gray-600">CPU: ${p.cpu_percent}%</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        <button onclick="killPid(${p.pid})" class="adm-only px-3 py-1 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 rounded-lg text-[10px] font-bold transition-all">Kill</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // --- Scripts Tab (summary + one area at a time) ---
+        async function loadScriptsTab() {
+            await loadAreasSummary();
+            if (!areasSummaryCache || !areasSummaryCache.length) {
+                document.getElementById('area-chips').innerHTML = '';
+                document.getElementById('areas-container').innerHTML = '<div class="py-20 text-center text-gray-500 uppercase tracking-widest">Nenhuma área no cadastro</div>';
+                document.getElementById('badge-scripts').textContent = '0';
+                return;
+            }
+            if (!selectedAreaName || !areasSummaryCache.some((a) => a.name === selectedAreaName)) {
+                selectedAreaName = areasSummaryCache[0].name;
+            }
+            renderAreaChips();
+            const q = (document.getElementById('script-search')?.value || '').trim().toLowerCase();
+            if (q) {
+                onScriptSearchInput();
+            } else {
+                await loadAreaScripts(selectedAreaName);
+            }
+        }
+
+        async function loadAreasSummary() {
+            const d = await api('/api/areas/summary');
+            if (!d || !d.areas) return;
+            areasSummaryCache = d.areas;
+            const total = areasSummaryCache.reduce((acc, a) => acc + (a.count || 0), 0);
+            document.getElementById('badge-scripts').textContent = String(total);
+        }
+
+        function renderAreaChips() {
+            const el = document.getElementById('area-chips');
+            if (!areasSummaryCache) return;
+            el.innerHTML = areasSummaryCache.map((a) => {
+                const active = a.name === selectedAreaName;
+                return `
+                    <button type="button" data-area="${encodeURIComponent(a.name)}"
+                        class="area-chip shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition ${active ? 'border-yellow-500 bg-yellow-500/15 text-yellow-400' : 'border-white/10 bg-white/5 text-gray-400 hover:border-white/20'}">
+                        ${a.name} <span class="opacity-60">(${a.count})</span>
+                    </button>`;
+            }).join('');
+            el.querySelectorAll('.area-chip').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    const name = decodeURIComponent(btn.getAttribute('data-area') || '');
+                    if (name && name !== selectedAreaName) {
+                        selectedAreaName = name;
+                        const searchEl = document.getElementById('script-search');
+                        if (searchEl) searchEl.value = '';
+                        document.getElementById('script-search-hint')?.classList.add('hidden');
+                        renderAreaChips();
+                        loadAreaScripts(name);
+                    }
+                });
+            });
+        }
+
+        async function loadAreaScripts(areaName) {
+            const loading = document.getElementById('area-scripts-loading');
+            const box = document.getElementById('areas-container');
+            loading.classList.remove('hidden');
+            box.innerHTML = '';
+            const q = encodeURIComponent(areaName);
+            const scripts = await api('/api/scripts/by-area?area=' + q);
+            loading.classList.add('hidden');
+            if (!scripts || !scripts.length) {
+                currentAreaScripts = [];
+                box.innerHTML = '<div class="py-16 text-center text-gray-500 text-xs uppercase tracking-widest">Nenhum script nesta área</div>';
+                return;
+            }
+            currentAreaScripts = scripts;
+            renderScriptCards(scripts, { globalMode: false });
+        }
+
+        function onScriptSearchInput() {
+            clearTimeout(_scriptSearchTimer);
+            _scriptSearchTimer = setTimeout(async () => {
+                const el = document.getElementById('script-search');
+                const hint = document.getElementById('script-search-hint');
+                const q = (el?.value || '').trim().toLowerCase();
+                if (!q) {
+                    hint?.classList.add('hidden');
+                    if (selectedAreaName) await loadAreaScripts(selectedAreaName);
+                    return;
+                }
+                hint?.classList.remove('hidden');
+                hint.textContent = 'Buscando em todas as áreas…';
+                const scripts = await api('/api/scripts/search?q=' + encodeURIComponent(q));
+                if (!scripts || !Array.isArray(scripts)) return;
+                currentAreaScripts = scripts;
+                hint.textContent = `Busca global: ${scripts.length} resultado(s)`;
+                renderScriptCards(scripts, { globalMode: true });
+            }, 300);
+        }
+
+        function renderScriptCards(scripts, opts) {
+            opts = opts || {};
+            const globalMode = !!opts.globalMode;
+            const list = scripts;
+            const runCls = isAdmin
+                ? 'px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-black text-[10px] font-black rounded-lg transition-all'
+                : 'hidden';
+            const killCls = isAdmin
+                ? 'touch-target sm:min-h-0 sm:min-w-0 p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors'
+                : 'hidden';
+
+            const html = list.map((s) => {
+                let statusHtml = '';
+                if (s.is_running) statusHtml = '<span class="flex items-center space-x-1.5 text-[10px] font-black text-green-500 uppercase"><span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span><span>Rodando</span></span>';
+                else if (s.is_queued) statusHtml = '<span class="text-[10px] font-black text-orange-500 uppercase">Na Fila</span>';
+                else if (!s.available_locally) statusHtml = '<span class="text-[10px] font-black text-red-500 uppercase">Sem Arquivo</span>';
+                else if (s.is_active) statusHtml = '<span class="text-[10px] font-black text-blue-500 uppercase">Ativo</span>';
+                else statusHtml = '<span class="text-[10px] font-black text-gray-600 uppercase">Inativo</span>';
+
+                const cronSourceBadge = s.cron_source === 'cobranca_xlsx'
+                    ? '<span class="text-[8px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 ml-1 align-middle whitespace-nowrap">CRON planilha cobrança</span>'
+                    : '';
+
+                const escName = String(s.python_name).replace(/'/g, "\\'");
+                const areaLine = globalMode
+                    ? `<div class="text-[10px] font-bold uppercase tracking-wider text-amber-400/95 mb-1">${escapeHtml(s.area_name)}</div>`
+                    : '';
+
+                return `
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 bg-white/[0.02] border border-white/5 rounded-xl hover:border-white/20 transition-all group">
+                        <div class="flex items-start gap-3 flex-1 min-w-0">
+                            ${getPriorityBadge(s.priority)}
+                            <div class="min-w-0 flex-1">
+                                ${areaLine}
+                                <div class="text-sm font-bold text-white truncate" title="${escapeHtml(s.objetivo || '')}">${escapeHtml(s.python_name)}</div>
+                                <div class="text-[10px] font-mono text-gray-500 flex flex-wrap items-center gap-x-1 gap-y-1">${escapeHtml(s.cron_raw || 'ON DEMAND')}${cronSourceBadge}</div>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap items-center justify-between sm:justify-end gap-2 sm:gap-4">
+                            ${statusHtml}
+                            <div class="flex items-center gap-2 min-w-0">
+                                ${s.is_running ? `<button type="button" onclick="killByName('${escName}')" class="${killCls}"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>` : ''}
+                                ${s.available_locally ? `<button type="button" onclick="runScript('${escName}')" class="${runCls}">Executar</button>` : ''}
+                            </div>
+                        </div>
+                    </div>`;
+            }).join('');
+
+            document.getElementById('areas-container').innerHTML = html || '<div class="py-12 text-center text-gray-500 text-xs">Nenhum script encontrado</div>';
+        }
+
+        // --- Pending Tab ---
+        async function loadPending() {
+            const d = await api('/api/pending'); 
+            if (!d) return;
+            
+            const badge = document.getElementById('badge-pending');
+            if (d.total > 0) {
+                badge.textContent = d.total;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+
+            document.getElementById('pending-date').textContent = d.date;
+            const tb = document.getElementById('pending-tbody');
+            
+            if (!d.pending.length) { 
+                tb.innerHTML = '<tr><td colspan="6" class="py-20 text-center text-gray-500 text-xs uppercase tracking-widest">Tudo em dia por aqui!</td></tr>'; 
+                return; 
+            }
+
+            tb.innerHTML = d.pending.map(p => `
+                <tr class="hover:bg-white/[0.02] transition-colors text-xs">
+                    <td class="px-6 py-4 font-bold text-white">${p.python_name}</td>
+                    <td class="px-6 py-4 uppercase text-[10px] text-gray-400">${p.area_name}</td>
+                    <td class="px-6 py-4 font-mono text-gray-500">${p.cron_raw}</td>
+                    <td class="px-6 py-4 font-bold text-orange-500">${p.expected_time}</td>
+                    <td class="px-6 py-4">${getPriorityBadge(p.priority)}</td>
+                    <td class="px-6 py-4 text-right">
+                        ${p.available_locally && isAdmin ? `<button onclick="runScript('${p.python_name}')" class="px-4 py-1.5 bg-yellow-500 hover:bg-yellow-400 text-black text-[10px] font-black rounded-lg transition-all">Executar</button>` : p.available_locally ? '<span class="text-[10px] text-gray-500">Somente admin</span>' : '<span class="text-gray-600">Sem arquivo</span>'}
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // --- History Tab ---
+        async function loadHistory() {
+            const script = document.getElementById('hist-script').value;
+            const status = document.getElementById('hist-status').value;
+            let url = '/api/history?limit=100';
+            if (script) url += '&script=' + encodeURIComponent(script);
+            if (status) url += '&status=' + status;
+            
+            const d = await api(url); 
+            if (!d) return;
+            
+            const tb = document.getElementById('hist-tbody');
+            if (!d.history.length) { 
+                tb.innerHTML = '<tr><td colspan="6" class="py-20 text-center text-gray-500 uppercase tracking-widest">Histórico vazio</td></tr>'; 
+                return; 
+            }
+
+            tb.innerHTML = d.history.map(h => {
+                const statusColors = {
+                    success: 'text-green-500 bg-green-500/10 border-green-500/20',
+                    error: 'text-red-500 bg-red-500/10 border-red-500/20',
+                    killed: 'text-orange-500 bg-orange-500/10 border-orange-500/20'
+                };
+                return `
+                    <tr class="hover:bg-white/[0.02] transition-colors">
+                        <td class="px-6 py-4">
+                            <div class="font-bold text-white">${h.python_name}</div>
+                            <div class="text-[9px] text-gray-500 uppercase">${h.area_name}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="px-2 py-0.5 rounded text-[9px] font-black border ${statusColors[h.status] || 'text-gray-500 border-gray-500/20'} uppercase">${h.status}</span>
+                        </td>
+                        <td class="px-6 py-4 text-gray-400 font-mono">${fmtDate(h.start_time)}</td>
+                        <td class="px-6 py-4 text-gray-300 font-mono">${h.duration_label}</td>
+                        <td class="px-6 py-4">
+                            <span class="text-[10px] text-gray-500 uppercase font-bold">${h.trigger_reason}</span>
+                        </td>
+                        <td class="px-6 py-4 font-mono text-gray-600">${h.exit_code ?? '--'}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // --- Jobs Tab ---
+        async function loadJobs() {
+            const d = await api('/api/jobs'); 
+            if (!d) return;
+            
+            const bqJob = d.find(j => j.id === 'hot_reload_job');
+            if (bqJob) updateReloadCountdown(bqJob.next_run_br);
+
+            const tb = document.getElementById('jobs-tbody');
+            
+            if (!d.length) { 
+                tb.innerHTML = '<tr><td colspan="4" class="py-20 text-center text-gray-500 uppercase tracking-widest">Nenhum agendamento ativo</td></tr>'; 
+                return; 
+            }
+
+            tb.innerHTML = d.map(j => {
+                const stemLower = j.id.replace('_cron', '').toLowerCase();
+
+                return `
+                    <tr class="hover:bg-white/[0.02] transition-colors">
+                        <td class="px-6 py-4 font-mono text-gray-500 text-xs">${j.id}</td>
+                        <td class="px-6 py-4">
+                            <div class="text-base font-bold text-white">${stemLower}</div>
+                            <div class="text-[10px] text-gray-500 font-mono">${j.name.split('[')[1]?.split(']')[0] || '--'}</div>
+                        </td>
+                        <td class="px-6 py-4 text-gray-400 font-mono text-sm">${fmtDate(j.next_run_br)}</td>
+                        <td class="px-6 py-4 text-right font-black text-yellow-500 font-mono text-lg">${countdown(j.next_run_br)}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // --- Actions ---
+        async function runScript(name) {
+            const d = await api('/api/run/' + encodeURIComponent(name), { method: 'POST' });
+            if (d) { 
+                toast(d.message, d.status === 'success' ? 'success' : 'error'); 
+                masterPoll(); 
+            }
+        }
+
+        async function killPid(pid) {
+            if (!confirm(`Encerrar processo PID ${pid}?`)) return;
+            const d = await api('/api/kill/' + pid, { method: 'POST' });
+            if (d) { 
+                toast(d.message, d.status === 'success' ? 'success' : 'error'); 
+                masterPoll(); 
+            }
+        }
+
+        async function killByName(name) {
+            if (!confirm(`Encerrar todas as instâncias de "${name}"?`)) return;
+            const d = await api('/api/kill/by-name/' + encodeURIComponent(name), { method: 'POST' });
+            if (d) { 
+                toast(d.message, d.status === 'success' ? 'success' : 'error'); 
+                masterPoll(); 
+            }
+        }
+
+        async function killAll() {
+            if (!confirm('Encerrar TODOS os processos regulares em execução?')) return;
+            const pids = statusData?.running_processes?.map(p => p.pid) || [];
+            for (const pid of pids) await api('/api/kill/' + pid, { method: 'POST' });
+            toast('Comando de encerramento em massa enviado', 'warning'); 
+            masterPoll();
+        }
+
+        const RELOAD_COOLDOWN_MS = 3 * 60 * 1000;
+        let _reloadSyncInFlight = false;
+        let _reloadAllowedAfter = 0;
+
+        function _setReloadSyncUiLoading(loading) {
+            document.querySelectorAll('.reload-sync-btn').forEach((btn) => {
+                /* Do not set button.disabled — disabled controls do not fire click, so users
+                   get no toast when clicking again during sync or cooldown. */
+                btn.setAttribute('aria-busy', loading ? 'true' : 'false');
+                btn.setAttribute('aria-disabled', loading ? 'true' : 'false');
+                btn.classList.toggle('opacity-50', loading);
+                btn.classList.toggle('cursor-wait', loading);
+            });
+            document.querySelectorAll('.reload-sync-icon').forEach((ic) => {
+                ic.classList.toggle('animate-spin', loading);
+            });
+        }
+
+        function _fmtReloadWait(sec) {
+            const s = Math.max(0, Math.ceil(sec));
+            const mm = Math.floor(s / 60);
+            const ss = s % 60;
+            return `${mm}m ${String(ss).padStart(2, '0')}s`;
+        }
+
+        async function forceReload() {
+            if (_reloadSyncInFlight) {
+                toast('Sincronização em andamento. Aguarde terminar.', 'warning');
+                return;
+            }
+            const now = Date.now();
+            if (now < _reloadAllowedAfter) {
+                const waitSec = (_reloadAllowedAfter - now) / 1000;
+                toast(`Intervalo mínimo de 3 minutos entre sincronizações. Aguarde ${_fmtReloadWait(waitSec)}.`, 'warning');
+                return;
+            }
+
+            _reloadSyncInFlight = true;
+            _setReloadSyncUiLoading(true);
+            try {
+                const r = await fetch(API + '/api/reload', { method: 'POST', credentials: 'same-origin' });
+                let d = {};
+                try {
+                    const raw = await r.text();
+                    if (raw) d = JSON.parse(raw);
+                } catch (e) {
+                    d = {};
+                }
+
+                if (r.status === 401) {
+                    showLoginUi();
+                    toast('Sessão expirada — faça login novamente.', 'warning');
+                    return;
+                }
+                if (r.status === 429 && d.status === 'cooldown') {
+                    const ws = Number(d.wait_seconds);
+                    const sec = Number.isFinite(ws) && ws > 0 ? ws : 180;
+                    _reloadAllowedAfter = Date.now() + sec * 1000;
+                    toast(`Limite do servidor: aguarde ${_fmtReloadWait(sec)} para sincronizar de novo.`, 'warning');
+                    return;
+                }
+                if (!r.ok) {
+                    toast((d && d.message) || `Erro ao sincronizar (HTTP ${r.status}).`, 'error');
+                    return;
+                }
+                if (d.status === 'success') {
+                    toast(`Sincronização concluída: ${d.script_count} scripts carregados`, 'success');
+                    _reloadAllowedAfter = Date.now() + RELOAD_COOLDOWN_MS;
+                    masterPoll();
+                    if (currentTab === 'scripts') loadScriptsTab();
+                } else {
+                    toast((d && d.message) || 'Resposta inesperada do servidor ao sincronizar.', 'error');
+                }
+            } catch (e) {
+                console.error('forceReload:', e);
+                toast('Falha de rede ao sincronizar.', 'error');
+            } finally {
+                _reloadSyncInFlight = false;
+                _setReloadSyncUiLoading(false);
+            }
+        }
+
+        async function updateUptime() {
+            const d = await api('/api/health'); 
+            if (d) document.getElementById('sidebar-uptime').textContent = fmtTime(d.uptime_seconds);
+            const info = await api('/api/server/info');
+            if (info && info.version) document.getElementById('server-version').textContent = 'v' + info.version;
+        }
+
+        // --- Initialization ---
+        let _dashboardBooted = false;
+        function bootDashboard() {
+            if (_dashboardBooted) return;
+            _dashboardBooted = true;
+            try {
+                const saved = localStorage.getItem(THEME_KEY);
+                if (saved === 'light' || saved === 'dark') applyTheme(saved);
+                else applyTheme('dark');
+            } catch (e) { applyTheme('dark'); }
+
+            document.getElementById('sidebar-open-btn')?.addEventListener('click', openSidebar);
+            document.getElementById('sidebar-close-btn')?.addEventListener('click', closeSidebar);
+            document.getElementById('sidebar-backdrop')?.addEventListener('click', closeSidebar);
+            document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSidebar(); });
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) masterPoll();
+            });
+            document.getElementById('theme-toggle-btn')?.addEventListener('click', toggleTheme);
+            document.getElementById('logout-btn')?.addEventListener('click', () => doLogout());
+            document.getElementById('share-outlook-btn')?.addEventListener('click', async () => {
+                const d = await api('/api/share_outlook', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: '{}',
+                });
+                if (d && d.status === 'success') {
+                    toast((d.message || 'Outlook aberto.') + (d.shared_url ? ' ' + d.shared_url : ''), 'success');
+                } else if (d && d.message) {
+                    toast(d.message, 'error');
+                }
+            });
+
+            document.getElementById('script-search')?.addEventListener('input', onScriptSearchInput);
+
+            switchTab('dashboard');
+            clearTimeout(_pollTimer);
+            pollLoop();
+            setInterval(updateUptime, 10000);
+            updateUptime();
+            loadPending();
+        }
+
+        async function bootstrapAuth() {
+            const ok = await refreshAuthStatus();
+            if (ok) {
+                hideLoginUi();
+                bootDashboard();
+            } else {
+                showLoginUi();
+            }
+        }
+
+        async function requestLoginToken() {
+            const msgEl = document.getElementById('login-msg');
+            const u = (document.getElementById('login-username')?.value || '').trim().toLowerCase();
+            if (msgEl) msgEl.textContent = '';
+            if (!u) {
+                if (msgEl) msgEl.textContent = 'Informe o usuário.';
+                return;
+            }
+            const r = await fetch(API + '/api/auth/request-token', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: u }),
+            });
+            let d = {};
+            try { d = await r.json(); } catch (e) {}
+            if (r.ok && d.status === 'success') {
+                if (msgEl) msgEl.textContent = d.message || 'Token enviado.';
+                document.getElementById('login-step-token')?.classList.remove('hidden');
+                document.getElementById('login-token')?.focus();
+            } else {
+                if (msgEl) msgEl.textContent = (d && d.message) || 'Não foi possível enviar o token.';
+            }
+        }
+
+        async function verifyLoginToken() {
+            const msgEl = document.getElementById('login-msg');
+            const u = (document.getElementById('login-username')?.value || '').trim().toLowerCase();
+            const token = (document.getElementById('login-token')?.value || '').trim();
+            if (msgEl) msgEl.textContent = '';
+            if (!token) {
+                if (msgEl) msgEl.textContent = 'Informe o código.';
+                return;
+            }
+            const r = await fetch(API + '/api/auth/verify', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: u, token }),
+            });
+            let d = {};
+            try { d = await r.json(); } catch (e) {}
+            if (r.ok && d.status === 'success') {
+                await refreshAuthStatus();
+                hideLoginUi();
+                bootDashboard();
+            } else {
+                if (msgEl) msgEl.textContent = (d && d.message) || 'Token inválido.';
+            }
+        }
+
+        function wireLoginForm() {
+            const msgEl = document.getElementById('login-msg');
+            document.getElementById('login-request-btn')?.addEventListener('click', async () => { await requestLoginToken(); });
+            document.getElementById('login-verify-btn')?.addEventListener('click', async () => { await verifyLoginToken(); });
+            document.getElementById('login-username')?.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    requestLoginToken();
+                }
+            });
+            document.getElementById('login-token')?.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    verifyLoginToken();
+                }
+            });
+            document.getElementById('login-back-btn')?.addEventListener('click', () => {
+                document.getElementById('login-step-token')?.classList.add('hidden');
+                if (msgEl) msgEl.textContent = '';
+            });
+        }
+
+        wireLoginForm();
+        bootstrapAuth();
+    </script>
+</body>
+</html>
