@@ -25,8 +25,8 @@ echo.
 
 if /I "%SOURCE%"=="%REPO%" goto SAME_FOLDER
 
-echo A copiar para o clone...
-for %%F in (main.py dashboard.html README.md LICENSE requirements.txt .gitignore .env.example deploy_para_github.bat.example) do (
+echo A copiar para o clone (open-source apenas — NAO copiar ServidorCron.py/.html)...
+for %%F in (main.py dashboard.html README.md LICENSE requirements.txt .gitignore .env.example deploy_para_github.bat.example ServidorCron.example.py ServidorCron.example.html) do (
   if exist "%SOURCE%\%%F" (
     copy /Y "%SOURCE%\%%F" "%REPO%\%%F" >nul
     echo   OK %%F

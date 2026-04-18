@@ -1,109 +1,103 @@
 # Abobi Server Cron
 
-**English (US)** | [Português (Brasil)](#português-brasil)
+<div align="center">
+
+**Python job orchestrator · BigQuery registry · Web dashboard · MIT**
+
+[English](#english-us) · [Português (Brasil)](#português-brasil)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
 
-Abobi Server Cron is a **single-process Python orchestrator**: it reads automation metadata from **Google BigQuery** (or local Excel fallbacks), schedules jobs with **APScheduler**, runs scripts with **priority queues** and a **health governor** (CPU/RAM), and serves a **web dashboard** (Flask + Waitress) for monitoring and admin actions.
-
-Originally derived from an internal operations server; this repository is a **sanitized, open-source** edition with **no proprietary paths, bank names, or secrets**.
-
----
-
-## Features
-
-- Dynamic **cron** scheduling (standard 5-field crontab) with APScheduler + SQLite job store  
-- **BigQuery** registry + optional **Excel** overrides for specific business areas  
-- **Catch-up** for missed runs (requires `croniter`)  
-- **Priority queue** (P1 / P2 / P3), concurrency limit, **resource governor**  
-- **Token login** via corporate e-mail (Outlook COM on Windows) or `ABOBI_MOCK_EMAIL` for dev  
-- REST **JSON API** + single-file **dashboard** (`dashboard.html`)
+</div>
 
 ---
 
-## Quick start
+## English (US)
+
+### One-liner for your LinkedIn / portfolio
+
+> **Abobi Server Cron** — Open-source Python orchestrator: automations registered in **Google BigQuery**, scheduled with **APScheduler**, executed with **priority queues** and a **CPU/RAM governor**, exposed through a **Flask + Waitress** dashboard with token login and REST API. Built for 24/7 operations teams who need visibility without microservices overhead.
+
+### What this repository contains (safe for GitHub)
+
+| Artifact | Purpose |
+|----------|---------|
+| `main.py` | **Canonical server** — scheduler, API, executor |
+| `dashboard.html` | **Canonical web UI** |
+| `ServidorCron.example.py` | Optional launcher that delegates to `main.py` (no secrets) |
+| `ServidorCron.example.html` | Short note for teams that use a private HTML filename locally |
+| `automacoes/` | Sample tree scanned for `.py` jobs (add your own scripts) |
+
+**Not committed (see `.gitignore`):** `ServidorCron.py` and `ServidorCron.html` — use these names **only on private machines** when you fork `main.py` / `dashboard.html` for internal branding or confidential paths. Never push them if they contain employer-specific data.
+
+### Features
+
+- Cron scheduling (5-field crontab) with **APScheduler** + SQLite job store  
+- **BigQuery** automation registry; optional **Excel** CRON overrides per business area  
+- **Catch-up** for missed runs (`croniter`)  
+- Priorities **P1 / P2 / P3**, concurrency cap, **resource governor**  
+- Token login via e-mail (**Outlook COM** on Windows, or `ABOBI_MOCK_EMAIL` for dev)  
+- REST JSON API + single-file dashboard  
+
+### Quick start
 
 ```bash
 git clone https://github.com/abobicaduco/ServidorCron.git
 cd ServidorCron
 pip install -r requirements.txt
-copy .env.example .env   # Windows — optional; edit values
+copy .env.example .env   # optional; edit for your environment
 python main.py
 ```
 
-Open **http://127.0.0.1:5002/** (default port; override with `ABOBI_PORT`).
+Open **http://127.0.0.1:5002/** (override with `ABOBI_PORT`).
 
-### Configuration
+### Configuration (high level)
 
 | Variable | Purpose |
 |----------|---------|
 | `ABOBI_SECRET_KEY` | Flask session secret (set in production) |
-| `ABOBI_EMAIL_DOMAIN` | Suffix for token e-mails, e.g. `@yourcompany.com` |
-| `ABOBI_ADMIN_USERS` | Comma-separated usernames with admin role |
-| `ABOBI_EXTRA_VIEWERS` | Extra viewer logins |
+| `ABOBI_EMAIL_DOMAIN` | Suffix for token e-mails (e.g. `@yourcompany.com`) |
+| `ABOBI_ADMIN_USERS` | Comma-separated admin usernames |
 | `ABOBI_MOCK_EMAIL` | `1` / `true` — log token to console instead of Outlook |
 | `ABOBI_AUTOMATIONS_DIR` | Root folder to scan for `.py` files |
-| `ABOBI_COBRANCA_CRON_XLSX` | Optional workbook for CRON overrides |
 | `BQ_REGISTRO_TABLE` | BigQuery table id for the automation registry |
-| `BQ_ACCESS_TABLE` | BigQuery table id for `users` / `level_access` |
-| `ABOBI_PORT` | HTTP port (default `5002`) |
+| `BQ_ACCESS_TABLE` | BigQuery table for `users` / `level_access` |
 
-Place **`access_registry.xlsx`** next to `main.py` if you are not using BigQuery for ACLs (columns `users`, `level_access`). See `.env.example`.
+Details: `.env.example`.
 
-### BigQuery
+### Security & publishing
 
-Use Application Default Credentials (ADC), e.g. `gcloud auth application-default login` for development, or a service account on servers. Tables must match the column names expected in code (`PYTHON_NAME`, `CRON`, `IS_ACTIVE`, etc. for the registry).
+- Do **not** commit `.env`, production credentials, or spreadsheets with real names.  
+- If `ServidorCron.py` / `ServidorCron.html` were ever committed, remove them from Git history and rotate secrets:  
+  `git rm --cached ServidorCron.py ServidorCron.html` then commit.  
+- Run behind firewall/VPN in production; set a strong `ABOBI_SECRET_KEY`.
 
----
+### License
 
-## Project layout
-
-| File / folder | Role |
-|----------------|------|
-| `main.py` | Backend, scheduler, API |
-| `dashboard.html` | Web UI |
-| `automacoes/` | Default tree scanned for `.py` scripts |
-| `requirements.txt` | Pinned dependencies |
+[MIT](LICENSE) — English legal text + Portuguese informative translation + short EN summary.
 
 ---
 
-## Security
+## Português (Brasil)
 
-- Do **not** commit `.env`, real `access_registry.xlsx`, or production credentials.  
-- Change `ABOBI_SECRET_KEY` before any public deployment.  
-- Run behind a firewall / VPN; bind to `127.0.0.1` or use a reverse proxy if needed.
+### Frase para LinkedIn / portfólio
 
----
+> **Abobi Server Cron** — Orquestrador Python open-source: cadastro de robôs no **BigQuery**, agendamento com **APScheduler**, execução com **fila por prioridade** e **governador de CPU/RAM**, painel **Flask + Waitress** com login por token e API REST. Pensado para equipes de operações que precisam de visibilidade sem stack de microserviços.
 
-## License
+### O que entra no GitHub
 
-[MIT](LICENSE) — Copyright (c) 2026 abobicaduco.
+| Arquivo | Função |
+|---------|--------|
+| `main.py` | **Servidor canônico** — agendador, API, executor |
+| `dashboard.html` | **Interface web canônica** |
+| `ServidorCron.example.py` | Launcher opcional que chama `main.py` (sem dados confidenciais) |
+| `ServidorCron.example.html` | Nota para quem usa nome de HTML privado localmente |
+| `automacoes/` | Pasta exemplo para seus `.py` |
 
-### Replacing an existing GitHub repo
+**Não versionar** (`.gitignore`): `ServidorCron.py` e `ServidorCron.html` — nomes usados em **cópias internas** quando você duplica `main.py` / `dashboard.html` com marca ou caminhos da empresa. **Não envie** ao GitHub se houver dados do empregador.
 
-If `main` already exists on GitHub with **older commits**, your first push may be rejected. Options:
-
-1. **Replace remote history** (only if you intend to overwrite the old tree):  
-   `git push --force-with-lease origin main`
-2. **Merge histories**: `git pull origin main --allow-unrelated-histories`, resolve conflicts, then `git push origin main`.
-
----
-
-## LinkedIn / portfolio blurb (short)
-
-> **Abobi Server Cron** — Open-source Python job orchestrator with BigQuery-backed registry, APScheduler, priority queue, resource governor, and Flask dashboard. Token auth, REST API, production-oriented logging. [MIT License](https://github.com/abobicaduco/ServidorCron)
-
----
-
-# Português (Brasil)
-
-## Visão geral
-
-O **Abobi Server Cron** é um orquestrador **Python** em processo único: lê metadados de automações no **Google BigQuery** (ou planilhas Excel locais), agenda tarefas com **APScheduler**, executa scripts com **fila por prioridade** e **governador de recursos** (CPU/RAM), e expõe um **painel web** (Flask + Waitress) para monitoramento e ações de administrador.
-
-Este repositório é uma edição **sanitizada e open-source**, **sem** caminhos internos de empresa, nomes de banco ou segredos.
-
-## Início rápido
+### Início rápido
 
 ```bash
 git clone https://github.com/abobicaduco/ServidorCron.git
@@ -115,14 +109,28 @@ python main.py
 
 Acesse **http://127.0.0.1:5002/** (porta padrão; altere com `ABOBI_PORT`).
 
-## Configuração
+### Fluxo recomendado (empresa vs. público)
 
-As variáveis de ambiente principais estão em **`.env.example`**. Para desenvolvimento sem Outlook, use `ABOBI_MOCK_EMAIL=1` — o token aparece no log.
+1. **Repositório público:** trabalhe com `main.py` + `dashboard.html`.  
+2. **Máquina corporativa:** copie `main.py` → `ServidorCron.py`, `dashboard.html` → `ServidorCron.html`, ajuste caminhos e textos **apenas localmente**; mantenha esses dois arquivos fora do Git.  
+3. Use `deploy_para_github.bat.example` como modelo para copiar **só** os artefatos open-source para o clone que vai subir.
 
-## Licença
+### Licença
 
-[MIT](LICENSE) — Copyright (c) 2026 abobicaduco.
+[MIT](LICENSE) — texto legal em inglês + tradução informativa em português.
 
-## Texto curto para LinkedIn (PT-BR)
+---
 
-> **Abobi Server Cron** — Orquestrador Python open-source com cadastro no BigQuery, APScheduler, fila por prioridade, governador de CPU/RAM e dashboard Flask. Autenticação por token, API REST e logs para operação. Licença MIT: [github.com/abobicaduco/ServidorCron](https://github.com/abobicaduco/ServidorCron)
+## Replacing remote history on GitHub
+
+If `main` already exists with older commits, your first push may be rejected. Options:
+
+1. **Overwrite** (only if intended): `git push --force-with-lease origin main`  
+2. **Merge**: `git pull origin main --allow-unrelated-histories`, resolve, then push.
+
+---
+
+## Links
+
+- **License:** [MIT](LICENSE)  
+- **Suggested repo URL:** `https://github.com/abobicaduco/ServidorCron` (adjust if your fork name differs)

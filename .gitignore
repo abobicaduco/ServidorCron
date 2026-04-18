@@ -6,6 +6,10 @@ __pycache__/
 venv/
 .env.local
 
+# Enterprise-only copies (internal branding, paths, or confidential strings — never push)
+ServidorCron.py
+ServidorCron.html
+
 # Local access / optional Excel (may contain names — keep private)
 access_registry.xlsx
 optional_cobranca_cron.xlsx
