@@ -10,6 +10,9 @@ venv/
 ServidorCron.py
 ServidorCron.html
 
+# Windows CMD quirk: `2>$null` creates a literal file named "$null" (use PowerShell or `2>nul` in CMD)
+$null
+
 # Local access / optional Excel (may contain names — keep private)
 access_registry.xlsx
 optional_cobranca_cron.xlsx
