@@ -41,7 +41,7 @@ def bootstrap():
         "apscheduler": "apscheduler==3.10.4",
         "flask": "flask==3.0.3",
         "flask_cors": "flask-cors==4.0.1",
-        "pandas": "pandas==2.2.2",
+        "pandas": "pandas==2.3.3",
         "openpyxl": "openpyxl==3.1.2",
         "psutil": "psutil==5.9.8",
         "pytz": "pytz==2024.1",
@@ -49,7 +49,7 @@ def bootstrap():
         "waitress": "waitress==3.0.0",
         "google.cloud.bigquery": "google-cloud-bigquery==3.20.1",
         "db_dtypes": "db-dtypes==1.2.0",
-        "sqlalchemy": "sqlalchemy==2.0.30"
+        "sqlalchemy": "sqlalchemy==2.0.38",
     }
     
     missing = []
@@ -244,6 +244,14 @@ _cron_auth_tokens: dict[str, dict] = {}
 _MAX_HISTORY = 1000
 _history_lock = threading.Lock()
 
+
+def _normalize_history_entry(entry: dict) -> dict:
+    """Align status with exit_code: 2 = no_data (common convention), not error."""
+    if entry.get("exit_code") == 2:
+        entry["status"] = "no_data"
+    return entry
+
+
 def _load_history_from_disk() -> deque:
     """Load execution history from JSON file on boot."""
     history = deque(maxlen=_MAX_HISTORY)
@@ -252,7 +260,7 @@ def _load_history_from_disk() -> deque:
             with open(_HISTORY_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
             for entry in data:
-                history.append(entry)
+                history.append(_normalize_history_entry(entry))
             logger.info(f"[BOOT] Histórico carregado: {len(history)} entradas de {_HISTORY_FILE}")
         except Exception:
             logger.warning(f"[BOOT] Falha ao carregar histórico de {_HISTORY_FILE}. Iniciando vazio.")
@@ -546,6 +554,18 @@ def _now_br() -> datetime:
     """Current datetime in São Paulo timezone (naive)."""
     return datetime.now(TZ).replace(tzinfo=None)
 
+
+def _history_entry_start_date(entry: dict):
+    """Calendar date of execution start from stored ISO `start_time`."""
+    st = entry.get("start_time") or ""
+    if len(st) >= 10:
+        try:
+            return datetime.strptime(st[:10], "%Y-%m-%d").date()
+        except ValueError:
+            pass
+    return None
+
+
 def _format_duration(seconds: float) -> str:
     """Human-readable duration string."""
     if seconds < 60:
@@ -570,7 +590,14 @@ def _record_execution(
 ) -> None:
     """Append a finished execution to in-memory history."""
     elapsed = round(end_ts - start_ts, 1)
-    status = "success" if exit_code == 0 else ("error" if exit_code else "killed")
+    if exit_code == 0:
+        status = "success"
+    elif exit_code == 2:
+        status = "no_data"
+    elif exit_code is None:
+        status = "killed"
+    else:
+        status = "error"
     entry = {
         "python_name":    python_name,
         "area_name":      area_name,
@@ -750,7 +777,7 @@ def _detect_pending_scripts() -> list[dict]:
     if not _HAS_CRONITER:
         return []
 
-    today_str = datetime.now(TZ).strftime("%Y-%m-%d")
+    today_str = _now_br().strftime("%Y-%m-%d")
     local_files = buscar_arquivos_locais()
     all_scripts = _get_all_scripts(local_files)
     schedulable = [
@@ -769,7 +796,7 @@ def _detect_pending_scripts() -> list[dict]:
     queued_names = {task["python_name"] for _, _, _, task in list(_task_queue.queue)}
 
     pending = []
-    now_dt = datetime.now(TZ)
+    now_dt = _now_br()
     today_start = now_dt.replace(hour=0, minute=0, second=0, microsecond=0)
 
     for s in schedulable:
@@ -944,7 +971,12 @@ def _run_p2p3(task_data: dict) -> None:
 
         exit_code = proc.returncode
         elapsed = round(time.time() - t_start, 1)
-        tag = "[OK]" if exit_code == 0 else "[ERR]"
+        if exit_code == 0:
+            tag = "[OK]"
+        elif exit_code == 2:
+            tag = "[NO_DATA]"
+        else:
+            tag = "[ERR]"
         logger.info(f"{tag} {name} | exit={exit_code} | elapsed={elapsed}s")
     except Exception as exc:
         logger.critical(f"[CRIT] {name}: {exc}")
@@ -997,7 +1029,12 @@ def _run_p1(task_data: dict) -> None:
 
         exit_code = proc.returncode
         elapsed = round(time.time() - t_start, 1)
-        tag = "[OK]" if exit_code == 0 else "[ERR]"
+        if exit_code == 0:
+            tag = "[OK]"
+        elif exit_code == 2:
+            tag = "[NO_DATA]"
+        else:
+            tag = "[ERR]"
         logger.info(f"{tag} {name} (P1) | exit={exit_code} | elapsed={elapsed}s")
     except Exception as exc:
         logger.critical(f"[CRIT] {name} (P1): {exc}")
@@ -1092,6 +1129,8 @@ _jobstores = {
 _scheduler = BackgroundScheduler(jobstores=_jobstores, timezone=TZ)
 _last_reload_ts: float = 0.0
 _reload_ts_lock = threading.Lock()
+_SCHEDULER_PROTECTED_JOB_IDS = frozenset({"hot_reload_job", "catchup_job"})
+
 
 def _job_wrapper(python_name: str, path: str, area_name: str, priority: int) -> None:
     enqueue_script(
@@ -1103,8 +1142,9 @@ def recarregar_agendamentos() -> list[dict]:
     logger.info("[RELOAD] Recarregando agendamentos do BigQuery...")
     _invalidate_local_files_cache()
     for job in _scheduler.get_jobs():
-        if job.id != "hot_reload_job":
-            job.remove()
+        if job.id in _SCHEDULER_PROTECTED_JOB_IDS:
+            continue
+        job.remove()
 
     local_files = buscar_arquivos_locais()
     scripts = _get_schedulable_scripts(local_files, force_bq=True)
@@ -1127,6 +1167,7 @@ def recarregar_agendamentos() -> list[dict]:
             logger.warning(f"Cron inválido '{s['cron_raw']}' para {s['python_name']}: {e}")
 
     logger.info(f"[RELOAD OK] {jobs_criados} jobs criados de {len(scripts)} scripts ativos")
+    threading.Thread(target=_catchup_pending_scripts, daemon=True, name="reload-catchup").start()
     return scripts
 
 def iniciar_scheduler() -> None:
@@ -1683,10 +1724,69 @@ def api_history():
         "max_stored": _MAX_HISTORY,
     })
 
+
+def _aggregate_history_stats(entries: list[dict]) -> dict:
+    """Counts and percentages by status; per-script breakdown. Excludes killed runs."""
+    counts = {"success": 0, "error": 0, "no_data": 0}
+    by_script: dict[str, dict[str, int]] = {}
+    for e in entries:
+        st = e.get("status", "")
+        if st == "killed":
+            continue
+        if st in counts:
+            counts[st] += 1
+        pn = e.get("python_name") or "?"
+        if pn not in by_script:
+            by_script[pn] = {"success": 0, "error": 0, "no_data": 0, "total": 0}
+        if st in by_script[pn]:
+            by_script[pn][st] += 1
+        by_script[pn]["total"] += 1
+    total = sum(counts.values())
+    pct = {k: round(100.0 * v / total, 1) if total else 0.0 for k, v in counts.items()}
+    return {"total": total, "counts": counts, "percent": pct, "by_script": by_script}
+
+
+@_app.route("/api/history/stats")
+def api_history_stats():
+    """Aggregates for dashboard: today vs last 7 calendar days. Optional `script` substring filter."""
+    try:
+        script_filter = request.args.get("script", "").lower().strip()
+        with _history_lock:
+            entries = list(_execution_history)
+        if script_filter:
+            entries = [e for e in entries if script_filter in (e.get("python_name") or "").lower()]
+
+        today = datetime.now(TZ).date()
+        week_start = today - timedelta(days=6)
+
+        def in_today(e: dict) -> bool:
+            d = _history_entry_start_date(e)
+            return d == today if d else False
+
+        def in_week(e: dict) -> bool:
+            d = _history_entry_start_date(e)
+            return d is not None and week_start <= d <= today
+
+        today_entries = [e for e in entries if in_today(e)]
+        week_entries = [e for e in entries if in_week(e)]
+
+        return jsonify({
+            "today": _aggregate_history_stats(today_entries),
+            "last_7_days": _aggregate_history_stats(week_entries),
+            "timezone": TIMEZONE,
+            "script_filter": script_filter or None,
+            "max_stored": _MAX_HISTORY,
+            "note": "Stats exclude killed; buffer is rolling in-memory history.",
+        })
+    except Exception:
+        logger.exception("[API] /api/history/stats failed")
+        return jsonify({"status": "error", "message": "stats aggregation failed"}), 500
+
+
 @_app.route("/api/pending")
 def api_pending():
     """Scripts that should have run today but haven't yet."""
-    today_str = datetime.now(TZ).strftime("%Y-%m-%d")
+    today_str = _now_br().strftime("%Y-%m-%d")
     pending = _detect_pending_scripts()
     # Strip internal 'path' key from API response
     sanitized = [{k: v for k, v in p.items() if k != "path"} for p in pending]

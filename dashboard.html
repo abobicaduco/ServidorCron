@@ -158,9 +158,86 @@
             background: rgba(14, 165, 233, 0.18) !important;
             color: #0c4a6e !important;
         }
+
+        /* --- Infinity-style ambient (Gojo palette: red / blue / purple) — dark theme only --- */
+        [data-theme="light"] #infinity-ambient-root {
+            display: none !important;
+        }
+        [data-theme="dark"] body {
+            background-color: transparent !important;
+        }
+        #infinity-ambient-root {
+            contain: strict;
+            background: #010103;
+        }
+        .infinity-blobs-wrap {
+            position: absolute;
+            inset: -12%;
+            overflow: hidden;
+            filter: blur(clamp(72px, 16vw, 150px)) contrast(1.28);
+        }
+        .infinity-blob {
+            position: absolute;
+            border-radius: 50%;
+            mix-blend-mode: screen;
+            opacity: 0.5;
+            will-change: transform;
+        }
+        .infinity-noise {
+            position: absolute;
+            inset: 0;
+            z-index: 1;
+            pointer-events: none;
+            opacity: 0.1;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+        }
+        .infinity-particle-canvas {
+            position: absolute;
+            inset: 0;
+            z-index: 2;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            mix-blend-mode: overlay;
+        }
+        .infinity-vignette {
+            position: absolute;
+            inset: 0;
+            z-index: 3;
+            pointer-events: none;
+            background: radial-gradient(circle, transparent 32%, rgba(0, 0, 0, 0.9) 100%);
+        }
+        [data-theme="dark"] #sidebar {
+            background-color: rgba(10, 10, 10, 0.58) !important;
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+        }
+        [data-theme="dark"] #main-panel {
+            background-color: rgba(5, 5, 5, 0.48) !important;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        [data-theme="dark"] .theme-header-bar {
+            background: rgba(5, 5, 5, 0.55) !important;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        [data-theme="dark"] .mobile-bar-cron {
+            background: rgba(10, 10, 10, 0.58) !important;
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+        }
     </style>
 </head>
 <body class="antialiased min-h-screen min-h-[100dvh]" style="background-color: var(--app-bg); color: var(--text-primary);">
+
+    <!-- Ambiente animado (vermelho / azul / roxo), atrás de toda a UI — tema escuro apenas -->
+    <div id="infinity-ambient-root" class="fixed inset-0 z-0 pointer-events-none overflow-hidden" aria-hidden="true">
+        <div class="infinity-blobs-wrap" id="infinity-energy-field"></div>
+        <div class="infinity-noise"></div>
+        <canvas id="infinity-particle-canvas" class="infinity-particle-canvas" width="300" height="300"></canvas>
+        <div class="infinity-vignette"></div>
+    </div>
 
     <!-- Login (token — same flow as ServidorUploaders) -->
     <div id="login-overlay" class="fixed inset-0 z-[200] flex flex-col items-center justify-center p-4 sm:p-6">
@@ -191,7 +268,7 @@
         </div>
     </div>
 
-    <div id="app-shell" class="hidden">
+    <div id="app-shell" class="relative z-10 hidden">
 
     <!-- Mobile menu bar -->
     <header class="mobile-bar-cron lg:hidden sticky top-0 z-50 flex items-center justify-between gap-2 px-3 py-2.5 border-b border-white/10 bg-[#0a0a0a]/95 backdrop-blur-md safe-area-pt">
@@ -209,7 +286,7 @@
 
     <div id="sidebar-backdrop" class="fixed inset-0 z-40 bg-black/70 opacity-0 pointer-events-none transition-opacity duration-200 lg:hidden" aria-hidden="true" role="presentation"></div>
 
-    <div class="flex min-h-0 flex-1 h-[100dvh] lg:h-screen overflow-hidden">
+    <div id="app-layout-root" class="flex min-h-0 flex-1 h-[100dvh] lg:h-screen overflow-hidden">
         <!-- Sidebar -->
         <aside class="fixed inset-y-0 left-0 z-50 flex w-[min(18rem,92vw)] flex-col border-r border-white/5 bg-[#0a0a0a] transition-transform duration-200 ease-out -translate-x-full lg:static lg:z-20 lg:w-64 lg:translate-x-0" id="sidebar">
             <div class="p-4 sm:p-6 border-b border-white/5 flex items-start justify-between gap-2">
@@ -248,13 +325,13 @@
                 </button>
                 <button onclick="switchTab('pending')" data-tab="pending" class="nav-item w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium text-gray-400 hover:bg-white/5 hover:text-white transition-all group">
                     <div class="flex items-center space-x-3">
-                        <svg class="w-5 h-5 group-hover:text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <svg class="w-5 h-5 group-hover:text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
                         <span>Pendentes</span>
                     </div>
                     <span class="text-[10px] bg-orange-500/20 px-1.5 py-0.5 rounded text-orange-500 hidden" id="badge-pending">0</span>
                 </button>
                 <button onclick="switchTab('history')" data-tab="history" class="nav-item w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-400 hover:bg-white/5 hover:text-white transition-all group">
-                    <svg class="w-5 h-5 group-hover:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <svg class="w-5 h-5 group-hover:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
                     <span>Histórico</span>
                 </button>
                 <button onclick="switchTab('jobs')" data-tab="jobs" class="nav-item w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-400 hover:bg-white/5 hover:text-white transition-all group">
@@ -316,14 +393,15 @@
                     </a>
                 </div>
                 <div class="flex flex-wrap items-center gap-3 sm:gap-4">
-                    <div class="text-[10px] text-gray-500 flex flex-wrap items-center gap-3 sm:gap-4">
-                        <div class="flex flex-col items-start sm:items-end">
-                            <span class="text-[8px] uppercase tracking-widest text-gray-600">Próxima atualização</span>
-                            <span id="bq-countdown" class="text-xs font-mono text-yellow-500 font-bold tabular-nums">--:--</span>
+                    <div class="flex min-w-0 items-stretch rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 sm:px-4 sm:py-2.5">
+                        <div class="flex min-w-[5.25rem] flex-col justify-center gap-1 pr-3 sm:min-w-[5.75rem] sm:pr-4">
+                            <span class="text-[9px] font-semibold uppercase tracking-wider text-gray-500 leading-tight">Próxima atualização</span>
+                            <span id="bq-countdown" class="text-sm font-mono font-bold tabular-nums text-yellow-500 leading-none">--:--</span>
                         </div>
-                        <div class="flex items-center gap-2 min-w-0">
-                            <span class="w-1.5 h-1.5 shrink-0 rounded-full bg-yellow-500 animate-pulse"></span>
-                            <span id="last-refresh" class="truncate text-[10px] sm:text-xs">Atualizando...</span>
+                        <div class="w-px shrink-0 bg-white/10 self-stretch" aria-hidden="true"></div>
+                        <div class="flex min-w-0 flex-1 flex-col justify-center gap-1 pl-3 sm:max-w-[12rem] sm:pl-4">
+                            <span class="text-[9px] font-semibold uppercase tracking-wider text-gray-500 leading-tight">Última atualização</span>
+                            <span id="last-refresh" class="truncate text-sm font-mono font-semibold tabular-nums text-gray-200">--:--:--</span>
                         </div>
                     </div>
                     <button type="button" onclick="forceReload()" class="adm-only reload-sync-btn touch-target sm:min-h-0 sm:min-w-0 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs font-semibold text-white transition-all flex items-center justify-center gap-2" aria-label="Sincronizar cadastro com BigQuery">
@@ -337,12 +415,15 @@
             <!-- Subheader mobile: title + status strip -->
             <div class="sm:hidden px-4 py-3 border-b border-white/5 bg-[#050505]/95 flex flex-col gap-2">
                 <h2 class="text-base font-bold text-white tracking-tight" id="page-title-mobile">Dashboard</h2>
-                <div class="flex items-center justify-between gap-2 text-[10px] text-gray-500">
-                    <div class="flex flex-col min-w-0">
-                        <span class="text-[8px] uppercase text-gray-600">Próxima atualização</span>
-                        <span id="bq-countdown-mobile" class="font-mono text-yellow-500 font-bold tabular-nums">--:--</span>
+                <div class="grid grid-cols-2 gap-0 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-left">
+                    <div class="flex flex-col gap-1 min-w-0 pr-2 border-r border-white/10">
+                        <span class="text-[8px] font-semibold uppercase tracking-wider text-gray-500 leading-tight">Próxima atualização</span>
+                        <span id="bq-countdown-mobile" class="text-base font-mono font-bold tabular-nums text-yellow-500 leading-none">--:--</span>
                     </div>
-                    <span id="last-refresh-mobile" class="truncate text-right">...</span>
+                    <div class="flex flex-col gap-1 min-w-0 pl-3">
+                        <span class="text-[8px] font-semibold uppercase tracking-wider text-gray-500 leading-tight">Última atualização</span>
+                        <span id="last-refresh-mobile" class="truncate text-base font-mono font-semibold tabular-nums text-gray-200 leading-none">--:--:--</span>
+                    </div>
                 </div>
             </div>
 
@@ -354,6 +435,39 @@
                     <!-- Stats Grid -->
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6" id="stats-grid">
                         <!-- Stats will be injected here -->
+                    </div>
+
+                    <!-- History rate cards (same visual weight as CPU/RAM/slots above) -->
+                    <div id="dash-history-stats-wrap" class="bg-white/[0.02] border border-white/5 rounded-xl sm:rounded-2xl p-4 sm:p-6 space-y-4">
+                        <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
+                            <div>
+                                <h3 class="text-xs sm:text-sm font-bold text-white uppercase tracking-widest">Execuções — taxa no histórico</h3>
+                                <p class="text-[10px] text-gray-500 mt-1 max-w-3xl leading-relaxed">
+                                    Status pelo <strong class="text-gray-400">código de saída</strong> do subprocesso: <strong class="text-gray-400">0</strong> sucesso, <strong class="text-gray-400">2</strong> sem dados, demais erros.
+                                    Execuções <strong class="text-gray-400">killed</strong> não entram nas taxas. Apenas buffer local (últimas <span id="dash-stats-max" class="font-mono text-gray-400">—</span> runs).
+                                </p>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2 shrink-0">
+                                <input type="search" id="dash-stats-script-filter" autocomplete="off" placeholder="Filtrar por script…" class="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white outline-none focus:ring-1 focus:ring-yellow-500 w-full sm:w-56">
+                                <button type="button" id="dash-stats-apply" class="px-4 py-2 bg-yellow-500 text-black rounded-lg text-xs font-bold hover:bg-yellow-400 transition-all">Aplicar</button>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
+                            <div class="space-y-3 rounded-lg border border-white/[0.04] bg-white/[0.01] p-3 sm:p-4">
+                                <div class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-gray-500">
+                                    <svg class="w-4 h-4 text-amber-500/80 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                                    <span>Hoje <span class="text-gray-600 font-mono normal-case" id="dash-stats-today-date"></span></span>
+                                </div>
+                                <div id="dash-history-today-cards" class="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 min-h-[5.5rem]"></div>
+                            </div>
+                            <div class="space-y-3 rounded-lg border border-white/[0.04] bg-gradient-to-br from-white/[0.02] to-transparent p-3 sm:p-4">
+                                <div class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-gray-500">
+                                    <svg class="w-4 h-4 text-sky-500/80 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.25 18L9 11.25l4.306 4.306L21.75 3.75M12.75 3.75h8.25v8.25"></path></svg>
+                                    <span>Últimos 7 dias</span>
+                                </div>
+                                <div id="dash-history-week-cards" class="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 min-h-[5.5rem]"></div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
@@ -372,7 +486,7 @@
                         <div class="bg-white/[0.02] border border-white/5 rounded-xl sm:rounded-2xl overflow-hidden min-w-0 flex flex-col">
                             <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-white/5 flex justify-between items-center bg-white/[0.01]">
                                 <h3 class="text-xs sm:text-sm font-bold text-white uppercase tracking-widest">Aguardando Rodar</h3>
-                                <svg class="w-4 h-4 text-yellow-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                <svg class="w-4 h-4 text-yellow-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M6 5l7 7-7 7"></path></svg>
                             </div>
                             <div id="dash-queued" class="p-3 sm:p-4 space-y-2 sm:space-y-3 max-h-[50vh] sm:max-h-none overflow-y-auto">
                                 <!-- Queued items injected here -->
@@ -405,9 +519,14 @@
                 <!-- LIVE TAB -->
                 <div id="tab-live" class="tab-content space-y-4 sm:space-y-6">
                     <div class="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
-                        <div class="flex items-center space-x-3 min-w-0">
-                            <div class="w-3 h-3 shrink-0 bg-red-500 rounded-full animate-pulse"></div>
-                            <h3 class="text-base sm:text-lg font-bold text-white truncate">Monitoramento em Tempo Real</h3>
+                        <div class="flex flex-wrap items-center gap-2 sm:gap-3 min-w-0">
+                            <button type="button" onclick="switchTab('dashboard')" class="shrink-0 rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-gray-300 hover:border-yellow-500/40 hover:bg-yellow-500/10 hover:text-yellow-200 transition-all">
+                                ← Dashboard
+                            </button>
+                            <div class="flex items-center space-x-3 min-w-0">
+                                <div class="w-3 h-3 shrink-0 bg-red-500 rounded-full animate-pulse"></div>
+                                <h3 class="text-base sm:text-lg font-bold text-white truncate">Processos em execução</h3>
+                            </div>
                         </div>
                         <button type="button" onclick="killAll()" class="adm-only touch-target sm:min-h-0 w-full sm:w-auto px-4 py-2.5 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 rounded-xl text-xs font-bold transition-all">
                             Encerrar Todos
@@ -465,6 +584,7 @@
                         <select id="hist-status" class="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-xs text-white outline-none focus:ring-1 focus:ring-yellow-500">
                             <option value="">Todos Status</option>
                             <option value="success">Sucesso</option>
+                            <option value="no_data">Sem dados</option>
                             <option value="error">Erro</option>
                             <option value="killed">Killed</option>
                         </select>
@@ -492,12 +612,11 @@
                 <!-- JOBS TAB -->
                 <div id="tab-jobs" class="tab-content space-y-6">
                     <div class="bg-white/[0.02] border border-white/5 rounded-xl sm:rounded-2xl overflow-hidden table-responsive overflow-x-auto">
-                        <table class="w-full min-w-[640px] text-left border-collapse">
+                        <table class="w-full min-w-[420px] text-left border-collapse">
                             <thead>
                                 <tr class="text-[10px] uppercase tracking-widest text-gray-500 border-b border-white/5 bg-white/[0.01]">
-                                    <th class="px-6 py-4">Job ID</th>
-                                    <th class="px-6 py-4">Nome / Expressão</th>
-                                    <th class="px-6 py-4">Próxima Execução</th>
+                                    <th class="px-6 py-4">Script (Python)</th>
+                                    <th class="px-6 py-4">Próxima execução</th>
                                     <th class="px-6 py-4 text-right">Countdown</th>
                                 </tr>
                             </thead>
@@ -529,6 +648,8 @@
         };
         let currentTab = 'dashboard';
         let statusData = null;
+        /** When set, Ao vivo highlights the matching script row (lowercase name). */
+        let _liveHighlightName = '';
         /** @type {{ name: string, count: number }[] | null} */
         let areasSummaryCache = null;
         /** @type {string | null} */
@@ -648,6 +769,13 @@
             if (tab === 'history') loadHistory();
             if (tab === 'jobs') loadJobs();
             if (tab === 'pending') loadPending();
+            if (tab !== 'live') _liveHighlightName = '';
+            if (tab === 'live' && statusData) renderLive(statusData);
+        }
+
+        function goToLiveForPython(name) {
+            _liveHighlightName = String(name || '').trim().toLowerCase();
+            switchTab('live');
         }
 
         function toast(msg, type = 'info') {
@@ -685,9 +813,16 @@
                     return null;
                 }
                 if (!r.ok) throw new Error(`HTTP error! status: ${r.status}`);
-                const ct = r.headers.get('content-type') || '';
-                if (ct.includes('application/json')) return await r.json();
-                return await r.text();
+                const text = await r.text();
+                const ct = (r.headers.get('content-type') || '').toLowerCase();
+                if (ct.includes('application/json')) {
+                    try { return JSON.parse(text); } catch (e) { return null; }
+                }
+                const t = text.trim();
+                if (t.startsWith('{') || t.startsWith('[')) {
+                    try { return JSON.parse(text); } catch (e) { return text; }
+                }
+                return text;
             } catch (e) {
                 console.error(`API Error (${path}):`, e);
                 return null;
@@ -740,9 +875,9 @@
             
             const stats = [
                 { label: 'CPU', value: s.cpu_percent + '%', sub: 'Processamento', color: s.cpu_percent > 85 ? 'text-red-500' : 'text-yellow-500', icon: 'M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z' },
-                { label: 'RAM', value: s.ram_percent + '%', sub: `${s.ram_used_gb}GB / ${s.ram_total_gb}GB`, color: s.ram_percent > 85 ? 'text-red-500' : 'text-blue-500', icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10' },
-                { label: 'Executando', value: d.running_count, sub: `de ${d.max_concurrent} slots`, color: 'text-green-500', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
-                { label: 'Na Fila', value: d.queued_count, sub: 'Aguardando recursos', color: 'text-orange-500', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' }
+                { label: 'RAM', value: s.ram_percent + '%', sub: `${s.ram_used_gb}GB / ${s.ram_total_gb}GB`, color: s.ram_percent > 85 ? 'text-red-500' : 'text-blue-500', icon: 'M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z' },
+                { label: 'Executando', value: d.running_count, sub: `de ${d.max_concurrent} slots`, color: 'text-green-500', icon: 'M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
+                { label: 'Na Fila', value: d.queued_count, sub: 'Aguardando recursos', color: 'text-orange-500', icon: 'M13 5l7 7-7 7M6 5l7 7-7 7' }
             ];
 
             container.innerHTML = stats.map(st => `
@@ -757,6 +892,128 @@
                     <div class="text-[10px] text-gray-500 font-medium uppercase truncate">${st.sub}</div>
                 </div>
             `).join('');
+        }
+
+        /** Same card shell as CPU/RAM/Executando/Na Fila (icon 5×5, 2xl value). */
+        function metricCardHtml(label, value, sub, colorClass, iconPath) {
+            return `
+                <div class="bg-white/[0.02] border border-white/5 p-4 sm:p-6 rounded-xl sm:rounded-2xl hover:bg-white/[0.04] transition-all group">
+                    <div class="flex justify-between items-start mb-3 sm:mb-4 gap-2">
+                        <div class="p-2 bg-white/5 rounded-lg group-hover:bg-white/10 transition-colors shrink-0">
+                            <svg class="w-5 h-5 text-gray-400 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${iconPath}"></path></svg>
+                        </div>
+                        <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest text-right leading-tight">${label}</span>
+                    </div>
+                    <div class="text-2xl sm:text-3xl font-black ${colorClass} tracking-tighter mb-1 tabular-nums">${value}</div>
+                    <div class="text-[10px] text-gray-500 font-medium uppercase truncate">${sub}</div>
+                </div>`;
+        }
+
+        const _ICONS = {
+            success: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
+            no_data: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+            error: 'M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+        };
+
+        function renderHistoryMetricCards(containerEl, block) {
+            if (!containerEl) return;
+            if (!block || !block.total) {
+                containerEl.innerHTML = `
+                    <div class="sm:col-span-3 bg-white/[0.02] border border-white/5 p-4 sm:p-6 rounded-xl sm:rounded-2xl">
+                        <p class="text-sm text-gray-500 text-center">Nenhuma execução neste período.</p>
+                    </div>`;
+                return;
+            }
+            const c = block.counts || {};
+            const p = block.percent || {};
+            const rows = [
+                { key: 'success', label: 'Sucesso', color: 'text-green-500', icon: _ICONS.success },
+                { key: 'no_data', label: 'Sem dados', color: 'text-slate-400', icon: _ICONS.no_data },
+                { key: 'error', label: 'Erro', color: 'text-red-500', icon: _ICONS.error },
+            ];
+            containerEl.innerHTML = rows.map(({ key, label, color, icon }) => {
+                const pct = p[key] != null ? p[key] : 0;
+                const cnt = c[key] != null ? c[key] : 0;
+                return metricCardHtml(label, pct + '%', cnt + ' run' + (cnt === 1 ? '' : 's'), color, icon);
+            }).join('');
+        }
+
+        function _ymdDiffDays(a, b) {
+            const pa = a.split('-').map(Number);
+            const pb = b.split('-').map(Number);
+            const ta = Date.UTC(pa[0], pa[1] - 1, pa[2]);
+            const tb = Date.UTC(pb[0], pb[1] - 1, pb[2]);
+            return Math.round((tb - ta) / 86400000);
+        }
+
+        function _spTodayYmd() {
+            return new Intl.DateTimeFormat('en-CA', {
+                timeZone: 'America/Sao_Paulo',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+            }).format(new Date());
+        }
+
+        function _aggregateHistoryEntries(entries) {
+            const counts = { success: 0, error: 0, no_data: 0 };
+            for (const e of entries) {
+                const st = e.status || '';
+                if (st === 'killed') continue;
+                if (Object.prototype.hasOwnProperty.call(counts, st)) counts[st]++;
+            }
+            const total = counts.success + counts.error + counts.no_data;
+            const pct = {
+                success: total ? Math.round(1000 * counts.success / total) / 10 : 0,
+                no_data: total ? Math.round(1000 * counts.no_data / total) / 10 : 0,
+                error: total ? Math.round(1000 * counts.error / total) / 10 : 0,
+            };
+            return { total, counts, percent: pct, by_script: {} };
+        }
+
+        async function buildHistoryStatsFromHistoryList(scriptFilter) {
+            let url = '/api/history?limit=1000';
+            if (scriptFilter) url += '&script=' + encodeURIComponent(scriptFilter);
+            const pack = await api(url);
+            if (!pack || !Array.isArray(pack.history)) return null;
+            const todayYmd = _spTodayYmd();
+            const todayList = [];
+            const weekList = [];
+            for (const h of pack.history) {
+                const ymd = (h.start_time && h.start_time.length >= 10) ? h.start_time.slice(0, 10) : null;
+                if (!ymd) continue;
+                if (ymd === todayYmd) todayList.push(h);
+                const diff = _ymdDiffDays(ymd, todayYmd);
+                if (diff >= -6 && diff <= 0) weekList.push(h);
+            }
+            return {
+                today: _aggregateHistoryEntries(todayList),
+                last_7_days: _aggregateHistoryEntries(weekList),
+                max_stored: pack.max_stored ?? '—',
+            };
+        }
+
+        async function loadDashboardHistoryStats() {
+            const elT = document.getElementById('dash-history-today-cards');
+            const elW = document.getElementById('dash-history-week-cards');
+            if (!elT || !elW) return;
+            const q = (document.getElementById('dash-stats-script-filter')?.value || '').trim();
+            let path = '/api/history/stats';
+            if (q) path += '?script=' + encodeURIComponent(q);
+            let d = await api(path);
+            if (!d || typeof d !== 'object' || !('today' in d)) {
+                d = await buildHistoryStatsFromHistoryList(q);
+            }
+            const mx = document.getElementById('dash-stats-max');
+            if (mx) mx.textContent = String(d?.max_stored ?? '—');
+            const td = document.getElementById('dash-stats-today-date');
+            if (td) td.textContent = '(' + new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) + ')';
+            if (!d) {
+                elT.innerHTML = elW.innerHTML = '<div class="sm:col-span-3 text-center text-red-400 text-sm py-4">Falha ao carregar estatísticas.</div>';
+                return;
+            }
+            renderHistoryMetricCards(elT, d.today);
+            renderHistoryMetricCards(elW, d.last_7_days);
         }
 
         function renderDashRunning(procs) {
@@ -787,8 +1044,9 @@
                                 </td>
                                 <td class="px-6 py-4 font-mono text-xs text-yellow-500">${fmtTime(p.running_time_seconds)}</td>
                                 <td class="px-6 py-4 font-mono text-xs text-gray-400">${p.rss_mb}MB</td>
-                                <td class="px-6 py-4 text-right">
-                                    <button onclick="killPid(${p.pid})" class="adm-only text-[10px] font-black text-red-500 hover:text-red-400 uppercase tracking-tighter">Encerrar</button>
+                                <td class="px-6 py-4 text-right space-x-2 whitespace-nowrap">
+                                    <button type="button" data-py="${escapeHtml(p.python_name)}" onclick="goToLiveForPython(this.getAttribute('data-py'))" class="text-[10px] font-bold uppercase tracking-tighter rounded-lg border border-sky-500/40 bg-sky-500/10 px-2 py-1 text-sky-300 hover:bg-sky-500/20 hover:text-sky-100">Ao vivo</button>
+                                    <button type="button" onclick="killPid(${p.pid})" class="adm-only text-[10px] font-black text-red-500 hover:text-red-400 uppercase tracking-tighter">Encerrar</button>
                                 </td>
                             </tr>
                         `).join('')}
@@ -844,11 +1102,11 @@
             if (d.running_count > 0) badgeLiveDot.classList.remove('hidden');
             else badgeLiveDot.classList.add('hidden');
 
-            const syncLabel = 'Sincronizado: ' + new Date().toLocaleTimeString('pt-BR');
+            const lastSyncTime = new Date().toLocaleTimeString('pt-BR');
             const lr = document.getElementById('last-refresh');
             const lrm = document.getElementById('last-refresh-mobile');
-            if (lr) lr.textContent = syncLabel;
-            if (lrm) lrm.textContent = syncLabel;
+            if (lr) lr.textContent = lastSyncTime;
+            if (lrm) lrm.textContent = lastSyncTime;
 
             if (d.next_hot_reload_iso) {
                 updateReloadCountdown(d.next_hot_reload_iso);
@@ -857,7 +1115,8 @@
             if (currentTab === 'dashboard') { 
                 renderStats(d); 
                 renderDashRunning(d.running_processes); 
-                renderDashQueued(d.queued_processes); 
+                renderDashQueued(d.queued_processes);
+                loadDashboardHistoryStats();
             }
             if (currentTab === 'live') renderLive(d);
         }
@@ -889,8 +1148,9 @@
                 tb.innerHTML = '<tr><td colspan="7" class="py-20 text-center text-gray-500 text-xs uppercase tracking-widest">Nenhum processo ativo no momento</td></tr>'; 
                 return; 
             }
+            const want = (_liveHighlightName || '').toLowerCase();
             tb.innerHTML = d.running_processes.map(p => `
-                <tr class="hover:bg-white/[0.02] transition-colors text-xs">
+                <tr data-live-python="${escapeHtml(p.python_name)}" class="hover:bg-white/[0.02] transition-colors text-xs ${want && (p.python_name || '').toLowerCase() === want ? 'ring-2 ring-inset ring-yellow-500/50 bg-yellow-500/[0.08]' : ''}">
                     <td class="px-6 py-4 font-bold text-white">${p.python_name}</td>
                     <td class="px-6 py-4 uppercase text-[10px] text-gray-400">${p.area_name}</td>
                     <td class="px-6 py-4 font-mono text-gray-500">${p.pid}</td>
@@ -902,11 +1162,22 @@
                             <span class="text-[9px] text-gray-600">CPU: ${p.cpu_percent}%</span>
                         </div>
                     </td>
-                    <td class="px-6 py-4 text-right">
-                        <button onclick="killPid(${p.pid})" class="adm-only px-3 py-1 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 rounded-lg text-[10px] font-bold transition-all">Kill</button>
+                    <td class="px-6 py-4 text-right space-x-2 whitespace-nowrap">
+                        <button type="button" data-py="${escapeHtml(p.python_name)}" onclick="goToLiveForPython(this.getAttribute('data-py'))" class="rounded-lg border border-sky-500/40 bg-sky-500/10 px-2 py-1 text-[10px] font-bold uppercase tracking-tighter text-sky-300 hover:bg-sky-500/20 hover:text-sky-100">Ao vivo</button>
+                        <button type="button" onclick="killPid(${p.pid})" class="adm-only px-3 py-1 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 rounded-lg text-[10px] font-bold transition-all">Kill</button>
                     </td>
                 </tr>
             `).join('');
+            if (want) {
+                requestAnimationFrame(() => {
+                    for (const tr of tb.querySelectorAll('tr[data-live-python]')) {
+                        if ((tr.getAttribute('data-live-python') || '').toLowerCase() === want) {
+                            tr.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                            break;
+                        }
+                    }
+                });
+            }
         }
 
         // --- Scripts Tab (summary + one area at a time) ---
@@ -1108,6 +1379,7 @@
             tb.innerHTML = d.history.map(h => {
                 const statusColors = {
                     success: 'text-green-500 bg-green-500/10 border-green-500/20',
+                    no_data: 'text-slate-300 bg-slate-500/15 border-slate-500/25',
                     error: 'text-red-500 bg-red-500/10 border-red-500/20',
                     killed: 'text-orange-500 bg-orange-500/10 border-orange-500/20'
                 };
@@ -1142,7 +1414,7 @@
             const tb = document.getElementById('jobs-tbody');
             
             if (!d.length) { 
-                tb.innerHTML = '<tr><td colspan="4" class="py-20 text-center text-gray-500 uppercase tracking-widest">Nenhum agendamento ativo</td></tr>'; 
+                tb.innerHTML = '<tr><td colspan="3" class="py-20 text-center text-gray-500 uppercase tracking-widest">Nenhum agendamento ativo</td></tr>'; 
                 return; 
             }
 
@@ -1151,10 +1423,8 @@
 
                 return `
                     <tr class="hover:bg-white/[0.02] transition-colors">
-                        <td class="px-6 py-4 font-mono text-gray-500 text-xs">${j.id}</td>
                         <td class="px-6 py-4">
                             <div class="text-base font-bold text-white">${stemLower}</div>
-                            <div class="text-[10px] text-gray-500 font-mono">${j.name.split('[')[1]?.split(']')[0] || '--'}</div>
                         </td>
                         <td class="px-6 py-4 text-gray-400 font-mono text-sm">${fmtDate(j.next_run_br)}</td>
                         <td class="px-6 py-4 text-right font-black text-yellow-500 font-mono text-lg">${countdown(j.next_run_br)}</td>
@@ -1321,6 +1591,7 @@
             });
 
             document.getElementById('script-search')?.addEventListener('input', onScriptSearchInput);
+            document.getElementById('dash-stats-apply')?.addEventListener('click', () => loadDashboardHistoryStats());
 
             switchTab('dashboard');
             clearTimeout(_pollTimer);
@@ -1412,6 +1683,148 @@
                 if (msgEl) msgEl.textContent = '';
             });
         }
+
+        (function initInfinityAmbient() {
+            const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            const root = document.getElementById('infinity-ambient-root');
+            const field = document.getElementById('infinity-energy-field');
+            const canvas = document.getElementById('infinity-particle-canvas');
+            if (!root || !field || !canvas || reduced) {
+                if (root) root.style.display = 'none';
+                return;
+            }
+            const ctx = canvas.getContext('2d');
+            const energyColors = ['#ff0000', '#0000ff', '#4b0082'];
+            const blobs = [];
+            let W = 1;
+            let H = 1;
+            let raf = 0;
+
+            function dims() {
+                W = Math.max(1, window.innerWidth);
+                H = Math.max(1, window.innerHeight);
+            }
+
+            function resizeCanvas() {
+                dims();
+                const dpr = Math.min(window.devicePixelRatio || 1, 2);
+                canvas.width = Math.floor(W * dpr);
+                canvas.height = Math.floor(H * dpr);
+                canvas.style.width = W + 'px';
+                canvas.style.height = H + 'px';
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            }
+
+            class EnergyBlob {
+                constructor(color, size) {
+                    this.el = document.createElement('div');
+                    this.el.className = 'infinity-blob';
+                    this.size = size;
+                    this.x = Math.random() * W;
+                    this.y = Math.random() * H;
+                    this.vx = (Math.random() - 0.5) * 5;
+                    this.vy = (Math.random() - 0.5) * 5;
+                    this.el.style.width = size + 'px';
+                    this.el.style.height = size + 'px';
+                    this.el.style.backgroundColor = color;
+                    this.el.style.left = '-200px';
+                    this.el.style.top = '-200px';
+                    field.appendChild(this.el);
+                }
+                update() {
+                    if (Math.random() > 0.965) {
+                        this.vx += (Math.random() - 0.5) * 4;
+                        this.vy += (Math.random() - 0.5) * 4;
+                    }
+                    const lim = 8;
+                    this.vx = Math.max(-lim, Math.min(lim, this.vx));
+                    this.vy = Math.max(-lim, Math.min(lim, this.vy));
+                    this.x += this.vx;
+                    this.y += this.vy;
+                    const pad = this.size * 0.35;
+                    if (this.x < -pad || this.x > W + pad) this.vx *= -1;
+                    if (this.y < -pad || this.y > H + pad) this.vy *= -1;
+                    this.el.style.transform = 'translate(' + this.x + 'px,' + this.y + 'px)';
+                }
+            }
+
+            const particles = [];
+            class Spark {
+                constructor() {
+                    this.reset();
+                }
+                reset() {
+                    this.x = Math.random() * W;
+                    this.y = Math.random() * H;
+                    this.size = Math.random() * 1.4 + 0.2;
+                    this.speedX = (Math.random() - 0.5) * 1.6;
+                    this.speedY = (Math.random() - 0.5) * 1.6;
+                    this.alpha = Math.random() * 0.45 + 0.08;
+                }
+                update() {
+                    this.x += this.speedX;
+                    this.y += this.speedY;
+                    if (this.x < 0 || this.x > W || this.y < 0 || this.y > H) this.reset();
+                }
+                draw() {
+                    ctx.fillStyle = 'rgba(255,255,255,' + this.alpha + ')';
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            function rebuildBlobs() {
+                field.innerHTML = '';
+                blobs.length = 0;
+                dims();
+                const mobile = window.matchMedia('(max-width: 768px)').matches;
+                const n = mobile ? 6 : 10;
+                for (let i = 0; i < n; i++) {
+                    const color = energyColors[i % energyColors.length];
+                    const base = Math.min(W, H);
+                    const size = base * (0.55 + Math.random() * 0.45);
+                    blobs.push(new EnergyBlob(color, size));
+                }
+                particles.length = 0;
+                const pn = mobile ? 36 : 80;
+                for (let j = 0; j < pn; j++) particles.push(new Spark());
+            }
+
+            function tick() {
+                if (document.documentElement.getAttribute('data-theme') !== 'dark') {
+                    raf = requestAnimationFrame(tick);
+                    return;
+                }
+                ctx.clearRect(0, 0, W, H);
+                blobs.forEach(function (b) { b.update(); });
+                particles.forEach(function (p) {
+                    p.update();
+                    p.draw();
+                });
+                raf = requestAnimationFrame(tick);
+            }
+
+            function onResize() {
+                resizeCanvas();
+                blobs.forEach(function (b) {
+                    b.x = Math.min(Math.max(b.x, 0), W);
+                    b.y = Math.min(Math.max(b.y, 0), H);
+                });
+            }
+
+            rebuildBlobs();
+            resizeCanvas();
+            tick();
+            let tresize = 0;
+            window.addEventListener('resize', function () {
+                clearTimeout(tresize);
+                tresize = setTimeout(function () {
+                    onResize();
+                    rebuildBlobs();
+                }, 120);
+            });
+        })();
 
         wireLoginForm();
         bootstrapAuth();

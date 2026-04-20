@@ -16,18 +16,17 @@ REM   git init -b main
 REM   git remote add origin https://github.com/abobicaduco/ServidorCron.git
 REM =============================================================================
 
-set "SOURCE=g:\My Drive\python\AbobiServerCron"
-REM Mesma pasta do projeto = deploy direto (sem copia). Troque se usar clone em outro disco:
+REM Pasta do proprio .bat (ServerCron) — mesmo repositorio git que voce rodou o deploy.
+set "SOURCE=%~dp0"
+if "%SOURCE:~-1%"=="\" set "SOURCE=%SOURCE:~0,-1%"
 set "REPO=%SOURCE%"
-REM Exemplo clone separado: set "REPO=D:\git\ServidorCron"
+REM Se usar clone em outro disco, mantenha SOURCE acima e defina REPO, ex.:
+REM set "REPO=D:\git\ServidorCron"
 
 REM Push FORCADO: substitui a branch main no GitHub por esta pasta ^(apaga historico antigo no remoto^).
 REM ATENCAO: depois que o push funcionar UMA vez, COMENTE a linha abaixo para nao sobrescrever o GitHub por engano.
 set "FORCE_GITHUB=1"
 REM Para deploy normal ^(sem apagar historico remoto^): comente a linha acima com REM.
-
-REM Opcional: usar sempre a pasta onde esta o .bat
-REM set "SOURCE=%~dp0" & if "%SOURCE:~-1%"=="\" set "SOURCE=%SOURCE:~0,-1%" & set "REPO=%SOURCE%"
 
 if not exist "%REPO%\.git" (
   echo [ERRO] Pasta sem repositorio git: %REPO%
